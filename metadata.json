@@ -1,0 +1,5 @@
+{
+  "name": "CipherPay",
+  "description": "Privacy-first invoice and payment protocol powered by Fhenix FHE on Ethereum Sepolia.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,21 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Hardhat
+artifacts/
+cache/
+typechain-types/
+
+# Temp files
+fhe_abi_temp.json
+public/tfhe_bg.wasm
+
+# IDE
+.claude/
+.vscode/
