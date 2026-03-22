@@ -25,6 +25,8 @@ import { Batch } from './pages/app/Batch';
 import { CipherDrop } from './pages/app/CipherDrop';
 import { Settings } from './pages/app/Settings';
 import { Notifications } from './pages/app/Notifications';
+import { PaymentProofs } from './pages/app/PaymentProofs';
+import { SharedInvoicePage } from './pages/app/SharedInvoicePage';
 import { Claim } from './pages/Claim';
 import { Pay } from './pages/Pay';
 import { Profile } from './pages/Profile';
@@ -64,6 +66,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="build" element={<Build />} />
               <Route path="guide" element={<Guide />} />
               <Route path="notifications" element={<Notifications />} />
+              <Route path="proofs" element={<PaymentProofs />} />
+              <Route path="shared" element={<SharedInvoicePage />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

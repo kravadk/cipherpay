@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Search, ChevronRight, ChevronDown, ExternalLink, Info, Zap, Shield, Lock, Code, HelpCircle } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const NAV_SECTIONS = [
   {
@@ -94,7 +95,7 @@ Browser (SDK)  →  Encrypt amount (TFHE + ZK proof)  →  Contract (Sepolia)
 - **Chain ID**: 11155111
 - **Network**: Ethereum Sepolia
 - **Currency**: SepoliaETH
-- **RPC**: \`https://rpc.ankr.com/eth_sepolia\`
+- **RPC**: \`https://1rpc.io/sepolia\`
 - **Explorer**: \`https://sepolia.etherscan.io\``,
 
   'Your First Invoice': `# Your First Invoice
@@ -545,7 +546,7 @@ await cofheClient.permits.removeActivePermit();
 Click the **"Switch Network"** button or manually configure:
 - **Chain ID**: 11155111
 - **Network Name**: Ethereum Sepolia
-- **RPC**: \`https://rpc.ankr.com/eth_sepolia\`
+- **RPC**: \`https://1rpc.io/sepolia\`
 - **Symbol**: ETH
 - **Explorer**: \`https://sepolia.etherscan.io\`
 
@@ -749,7 +750,7 @@ export function Guide() {
             [&_td]:py-2 [&_td]:text-sm [&_td]:text-text-secondary [&_td]:border-b [&_td]:border-border-default
             [&_a]:text-primary [&_a]:hover:underline
           ">
-            <ReactMarkdown>{CONTENT[activeItem] || `# ${activeItem}\n\nThis section is currently under development.`}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{CONTENT[activeItem] || `# ${activeItem}\n\nThis section is currently under development.`}</ReactMarkdown>
           </div>
 
           <div className="pt-12 border-t border-border-default flex flex-col md:flex-row items-center justify-between gap-6">

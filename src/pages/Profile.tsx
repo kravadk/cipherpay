@@ -15,13 +15,14 @@ export function Profile() {
 
   return (
     <div className="min-h-screen bg-bg-base flex flex-col">
-      <div className="px-8 py-6">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center rotate-45">
-            <div className="w-3 h-3 bg-black rounded-sm -rotate-45" />
-          </div>
+      <div className="px-8 py-6 flex items-center justify-between">
+        <a href="/app/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <img src="/logo.png" alt="CipherPay" className="w-6 h-6 rounded-md" />
           <span className="text-sm font-bold text-white tracking-tight">CipherPay</span>
-        </div>
+        </a>
+        <a href="/app/dashboard" className="text-xs text-text-muted hover:text-primary transition-colors">
+          ← Go to Dashboard
+        </a>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8">

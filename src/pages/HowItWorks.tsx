@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Shield, Lock, Eye, EyeOff, Globe, Zap, CheckCircle, ArrowRight, ArrowLeft, Loader2, Copy, QrCode } from 'lucide-react';
 import { Button } from '../components/Button';
+import { Link } from 'react-router-dom';
 
 export function HowItWorks() {
   return (
@@ -29,19 +30,19 @@ export function HowItWorks() {
           { 
             step: '01', 
             title: 'Encrypt', 
-            desc: 'When you create an invoice, your wallet encrypts the sensitive data (amount, recipient, memo) using the Fhenix public key.',
+            desc: 'Amount encrypted client-side via CoFHE SDK (TFHE + ZK proof). 5-stage pipeline runs in Web Worker — your browser never sends plaintext.',
             icon: <Lock className="w-8 h-8 text-primary" />
           },
           { 
             step: '02', 
             title: 'Compute', 
-            desc: 'The Fhenix network processes the encrypted transaction. It can verify balances and settle payments without ever seeing the numbers.',
+            desc: 'CoFHE coprocessor executes FHE operations off-chain — FHE.add() for multi-pay, FHE.gte() for thresholds. Results returned as new ciphertext handles.',
             icon: <Zap className="w-8 h-8 text-secondary" />
           },
           { 
             step: '03', 
             title: 'Settle', 
-            desc: 'Once paid, a cryptographic proof of settlement is generated. Both parties can verify the result privately.',
+            desc: 'Real ETH transfers on settlement. Creator and recipient decrypt amounts via EIP-712 permit through CoFHE Threshold Network.',
             icon: <Shield className="w-8 h-8 text-purple-500" />
           }
         ].map((item, i) => (
@@ -81,7 +82,7 @@ export function HowItWorks() {
             <div className="bg-surface-2 border border-border-default rounded-2xl p-8 space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-text-secondary">Invoice Hash</span>
-                <span className="text-sm font-mono text-white">cx8f...3a2</span>
+                <span className="text-sm font-mono text-white">0x7cef...23e3</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-text-secondary">Status</span>
@@ -89,7 +90,7 @@ export function HowItWorks() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-text-secondary">Block Height</span>
-                <span className="text-sm font-mono text-white">48,315</span>
+                <span className="text-sm font-mono text-white">10,492,395</span>
               </div>
             </div>
           </div>
@@ -151,9 +152,11 @@ export function HowItWorks() {
               </li>
             ))}
           </ul>
-          <Button variant="outline">
-            Read Technical Docs <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+          <Link to="/app/guide">
+            <Button variant="outline">
+              Read Technical Docs <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </Link>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, x: 20 }}
@@ -189,9 +192,11 @@ export function HowItWorks() {
       </section>
 
       <section className="text-center py-12">
-        <Button size="lg">
-          Start Building on Fhenix <ArrowRight className="w-5 h-5 ml-2" />
-        </Button>
+        <Link to="/app/build">
+          <Button size="lg">
+            Start Building with CipherPay <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+        </Link>
       </section>
     </div>
   );

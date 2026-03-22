@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Shield, Lock, Globe, Zap, CheckCircle, ArrowRight } from 'lucide-react';
 import { Button } from '../components/Button';
+import { Link } from 'react-router-dom';
 
 export function Manifesto() {
   return (
@@ -114,22 +115,28 @@ export function Manifesto() {
         <h2 className="text-4xl font-bold text-white text-center tracking-tight">Roadmap</h2>
         <div className="relative space-y-12 before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-border-default">
           {[
-            { 
-              phase: 'Phase 1 (Current)', 
-              title: 'Ethereum Sepolia Launch', 
-              items: ['Standard + Multi Pay + Recurring invoices', 'FHE Encryption Engine', 'Public Explorer'],
+            {
+              phase: 'Wave 1 (Current)',
+              title: 'Core Protocol + FHE',
+              items: ['Standard, Multi Pay, Recurring invoices', 'FHE encryption end-to-end (CoFHE SDK)', 'Real ETH transfers with auto-settle', 'Permit-based Reveal (decryptForView)'],
               active: true
             },
-            { 
-              phase: 'Phase 2', 
-              title: 'Ecosystem Expansion', 
-              items: ['HashKey integration', 'Recurring payroll automation', 'Fee redistribution yield'],
+            {
+              phase: 'Wave 2',
+              title: 'Full FHE + Indexing',
+              items: ['Full FHE decryption for all amounts', 'The Graph subgraph for event indexing', 'Encrypted threshold milestones', 'Dual receipt system'],
               active: false
             },
-            { 
-              phase: 'Phase 3', 
-              title: 'Enterprise Protocol', 
-              items: ['Audit SDK & API', 'Mobile app', 'Cross-chain privacy bridge'],
+            {
+              phase: 'Wave 3',
+              title: 'Automation + Distribution',
+              items: ['Recurring automation via Chainlink', 'Batch single-tx payments', 'CipherDrop (Merkle airdrop)', 'ReinieraOS cross-chain USDC'],
+              active: false
+            },
+            {
+              phase: 'Wave 4-5',
+              title: 'Compliance + Production',
+              items: ['Audit packages with scoped disclosure', 'Salary Proof (FHE.gte)', 'Multi-chain deployment', 'Merchant SDK'],
               active: false
             }
           ].map((step, i) => (
@@ -167,9 +174,11 @@ export function Manifesto() {
       </section>
 
       <section className="text-center py-12">
-        <Button size="lg">
-          Join the Privacy Revolution <ArrowRight className="w-5 h-5 ml-2" />
-        </Button>
+        <Link to="/app/dashboard">
+          <Button size="lg">
+            Launch CipherPay <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+        </Link>
       </section>
     </div>
   );

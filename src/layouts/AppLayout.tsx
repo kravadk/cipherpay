@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { AppSidebar } from '../components/AppSidebar';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { NetworkStrip } from '../components/NetworkStrip';
 
 export function AppLayout() {
@@ -14,7 +13,6 @@ export function AppLayout() {
 
   return (
     <div className="relative min-h-screen bg-bg-base flex overflow-hidden">
-      <ThemeToggle />
       <NetworkStrip />
       <div className="noise-overlay pointer-events-none" />
       <AppSidebar />

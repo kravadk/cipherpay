@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { Outlet } from 'react-router-dom';
 import { Preloader } from '../components/Preloader';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { CustomCursor } from '../components/CustomCursor';
 import { NetworkStrip } from '../components/NetworkStrip';
 
@@ -10,7 +9,6 @@ export function LandingLayout() {
   return (
     <div className="relative min-h-screen bg-bg-base overflow-x-hidden">
       <Preloader />
-      <ThemeToggle />
       <CustomCursor />
       <NetworkStrip />
       <div className="noise-overlay pointer-events-none" />
