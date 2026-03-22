@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
-import { CIPHERPAY_ADDRESS, CIPHERPAY_ABI, INVOICE_TYPE_MAP, INVOICE_STATUS_MAP } from '../config/contract';
+import { CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ABI, INVOICE_TYPE_MAP, INVOICE_STATUS_MAP } from '../config/contract';
 import { useContractStatus } from './useContractStatus';
 import { formatEther } from 'viem';
 import type { Invoice } from '../store/useInvoiceStore';
@@ -23,24 +23,26 @@ export function useInvoices() {
     setError(null);
 
     try {
-      // Get invoices created by user
-      const createdHashes = await publicClient.readContract({
-        address: CIPHERPAY_ADDRESS,
-        abi: CIPHERPAY_ABI as any,
-        functionName: 'getUserInvoices',
-        args: [address],
-      } as any) as `0x${string}`[];
-
-      // Get invoices user has paid
+      // Get invoices from BOTH contracts (FHE + Simple)
+      let createdHashes: `0x${string}`[] = [];
       let paidHashes: `0x${string}`[] = [];
-      try {
-        paidHashes = await publicClient.readContract({
-          address: CIPHERPAY_ADDRESS,
-          abi: CIPHERPAY_ABI as any,
-          functionName: 'getPaidInvoices',
-          args: [address],
-        } as any) as `0x${string}`[];
-      } catch { /* getPaidInvoices may not exist on older contract */ }
+
+      for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {
+        try {
+          const created = await publicClient.readContract({
+            address: contractAddr, abi: CIPHERPAY_ABI as any,
+            functionName: 'getUserInvoices', args: [address],
+          } as any) as `0x${string}`[];
+          createdHashes = [...createdHashes, ...(created || [])];
+        } catch {}
+        try {
+          const paid = await publicClient.readContract({
+            address: contractAddr, abi: CIPHERPAY_ABI as any,
+            functionName: 'getPaidInvoices', args: [address],
+          } as any) as `0x${string}`[];
+          paidHashes = [...paidHashes, ...(paid || [])];
+        } catch {}
+      }
 
       // Merge and deduplicate
       const hashSet = new Set<string>();
@@ -58,15 +60,23 @@ export function useInvoices() {
         return;
       }
 
-      // Fetch each invoice's details
+      // Fetch each invoice's details (try both contracts)
       const invoicePromises = hashes.map(async (hash) => {
         try {
-          const data = await publicClient.readContract({
-            address: CIPHERPAY_ADDRESS,
-            abi: CIPHERPAY_ABI as any,
-            functionName: 'getInvoice',
-            args: [hash],
-          }) as unknown as any[];
+          let data: any[] | null = null;
+          for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {
+            try {
+              const result = await publicClient.readContract({
+                address: contractAddr, abi: CIPHERPAY_ABI as any,
+                functionName: 'getInvoice', args: [hash],
+              }) as unknown as any[];
+              if ((result[0] as string) !== '0x0000000000000000000000000000000000000000') {
+                data = result;
+                break;
+              }
+            } catch {}
+          }
+          if (!data) return null;
 
           const creator = data[0] as string;
           const recipient = data[1] as string;
@@ -102,32 +112,30 @@ export function useInvoices() {
             } catch {}
           }
 
-          // Read memo from contract
+          // Read memo from contract (try both)
           let memoStr = '';
-          try {
-            memoStr = await publicClient.readContract({
-              address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-              functionName: 'getInvoiceMemo', args: [hash],
-            }) as string;
-          } catch {}
+          for (const addr of [CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ADDRESS]) {
+            try {
+              const memo = await publicClient.readContract({
+                address: addr, abi: CIPHERPAY_ABI as any,
+                functionName: 'getInvoiceMemo', args: [hash],
+              }) as string;
+              if (memo) { memoStr = memo; break; }
+            } catch {}
+          }
 
-          // Multi-pay: payer count is public, amounts are encrypted
-          let totalCollected = '••••••';
+          // Multi-pay: try to get collected data from both contracts
+          let totalCollected = '0';
           let targetAmount = amountStr;
           let payerCount = 0;
           let collectedPercent = 0;
           if (invoiceType === 1) { // multi-pay
-            try {
-              const count = await publicClient.readContract({
-                address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-                functionName: 'getPayerCount', args: [hash],
-              }) as bigint;
-              payerCount = Number(count);
-            } catch {
-              // Try old contract format
+            // Try getInvoiceCollected from Simple contract (has plaintext data)
+            const collectedAbi = [{ name: 'getInvoiceCollected', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'collected', type: 'uint256' }, { name: 'target', type: 'uint256' }, { name: 'payerCount', type: 'uint256' }] }] as const;
+            for (const addr of [CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ADDRESS]) {
               try {
                 const collected = await publicClient.readContract({
-                  address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+                  address: addr, abi: collectedAbi as any,
                   functionName: 'getInvoiceCollected', args: [hash],
                 }) as [bigint, bigint, bigint];
                 totalCollected = formatEther(collected[0]);
@@ -135,6 +143,7 @@ export function useInvoices() {
                 payerCount = Number(collected[2]);
                 const target = Number(targetAmount);
                 collectedPercent = target > 0 ? Math.min(100, (Number(totalCollected) / target) * 100) : 0;
+                break;
               } catch {}
             }
           }

@@ -6,7 +6,7 @@ export interface Invoice {
   id: string;
   hash: string;
   type: 'standard' | 'multi-pay' | 'recurring' | 'vesting' | 'batch';
-  status: 'open' | 'settled' | 'cancelled' | 'locked';
+  status: 'open' | 'settled' | 'cancelled' | 'locked' | 'paused';
   createdAt: string;
   amount: string;
   seller: string;

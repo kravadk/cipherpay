@@ -99,6 +99,53 @@ export function useNotifications() {
         }
       }
 
+      // Fetch InvoiceCreated events where user is the recipient
+      for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {
+        try {
+          const createdLogs = await publicClient.getLogs({
+            address: contractAddr,
+            event: {
+              type: 'event',
+              name: 'InvoiceCreated',
+              inputs: [
+                { name: 'invoiceHash', type: 'bytes32', indexed: true },
+                { name: 'creator', type: 'address', indexed: true },
+                { name: 'invoiceType', type: 'uint8', indexed: false },
+                { name: 'recipient', type: 'address', indexed: false },
+                { name: 'deadline', type: 'uint256', indexed: false },
+                { name: 'unlockBlock', type: 'uint256', indexed: false },
+                { name: 'memo', type: 'string', indexed: false },
+              ],
+            },
+            fromBlock,
+            toBlock: 'latest',
+          });
+
+          for (const log of createdLogs) {
+            const recipient = (log.args as any)?.recipient;
+            const creator = (log.args as any)?.creator;
+            const hash = (log.args as any)?.invoiceHash;
+            if (!recipient || !hash) continue;
+
+            // Only show if user IS the recipient and NOT the creator
+            if (recipient.toLowerCase() === address.toLowerCase() && creator?.toLowerCase() !== address.toLowerCase()) {
+              const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+              notifs.push({
+                id: `created-for-${log.transactionHash}-${log.logIndex}`,
+                type: 'payment_received',
+                title: 'Invoice Assigned to You',
+                message: `${creator?.slice(0, 6)}...${creator?.slice(-4)} created an invoice for you: ${hash.slice(0, 10)}...`,
+                invoiceHash: hash,
+                txHash: log.transactionHash,
+                blockNumber: log.blockNumber,
+                timestamp: Number(block.timestamp) * 1000,
+                read: false,
+              });
+            }
+          }
+        } catch {}
+      }
+
       // Fetch InvoiceSettled events for invoices user is involved in
       const allMyHashes = invoices.map(inv => inv.hash as `0x${string}`);
       for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {

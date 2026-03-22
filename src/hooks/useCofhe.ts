@@ -34,9 +34,13 @@ export function useCofhe() {
         // Handle both ESM default and named exports
         const WagmiAdapter = adaptersMod.WagmiAdapter || (adaptersMod as any).default?.WagmiAdapter;
 
-        // Create config with Sepolia
+        // Import chains with CoFHE URL configured
+        const { sepolia: sepoliaChain } = await import('@cofhe/sdk/chains');
+
+        // Create config — use the full chain object from SDK (includes coFheUrl, verifierUrl, thresholdNetworkUrl)
         const config = createCofheConfig({
-          supportedChains: [{ id: 11155111 }] as any,
+          supportedChains: [sepoliaChain],
+          useWorkers: typeof SharedArrayBuffer !== 'undefined',
         });
 
         // Create client
@@ -98,6 +102,21 @@ export function useCofhe() {
     return clientRef.current.permits.removeActivePermit();
   }, []);
 
+  // Force create a new permit (always triggers MetaMask popup)
+  const createFreshPermit = useCallback(async (issuerAddress?: string) => {
+    if (!clientRef.current) throw new Error('CofheClient not initialized');
+    // Try getOrCreate first (uses cached permit if valid)
+    // If that fails, create fresh with issuer
+    try {
+      return await clientRef.current.permits.getOrCreateSelfPermit();
+    } catch {
+      if (issuerAddress) {
+        return clientRef.current.permits.createSelf({ issuer: issuerAddress, name: 'CipherPay Reveal' });
+      }
+      throw new Error('No issuer address for permit');
+    }
+  }, []);
+
   // Expose Encryptable and FheTypes for consumers
   const getEncryptable = useCallback(() => sdkRef.current?.Encryptable, []);
   const getFheTypes = useCallback(() => sdkRef.current?.FheTypes, []);
@@ -111,6 +130,7 @@ export function useCofhe() {
     decrypt,
     getOrCreateSelfPermit,
     removeActivePermit,
+    createFreshPermit,
     getEncryptable,
     getFheTypes,
   };

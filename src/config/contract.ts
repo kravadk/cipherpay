@@ -1,8 +1,13 @@
 // Simple contract (plaintext amounts — MVP fallback)
-export const CIPHERPAY_SIMPLE_ADDRESS = '0xa84607842BBb8b9871E3A64FD9a5AFEb8d2C9aBE' as const;
+export const CIPHERPAY_SIMPLE_ADDRESS = '0x28994f265d07189dE3098eda3DB7dd16E15c9419' as const;
 
 // FHE contract (encrypted amounts via Fhenix CoFHE)
-export const CIPHERPAY_FHE_ADDRESS = '0x39655b5171577e91AFB57d86a48c6D39D51f20eb' as const;
+export const CIPHERPAY_FHE_ADDRESS = '0xB86C10A9FeeD61d525A94B5E6a12409a697ac592' as const;
+
+// Module contracts
+export const PAYMENT_PROOF_ADDRESS = '0x54C22cdF7B65E64C75EeEF565E775503C7657293' as const;
+export const SHARED_INVOICE_ADDRESS = '0xd12eAcAD8FD0cd82894d819f4fb5e4E9168eB746' as const;
+export const INVOICE_METRICS_ADDRESS = '0x02ae50D014Ed6E627Aacd92A7E8C057F662b25eF' as const;
 
 // Use FHE contract as primary
 export const CIPHERPAY_ADDRESS = CIPHERPAY_FHE_ADDRESS;
@@ -138,6 +143,24 @@ export const CIPHERPAY_ABI = [
     ],
     outputs: [{ name: '', type: 'bool' }],
   },
+  // Async decrypt — two-phase pattern
+  {
+    name: 'requestFullyPaidCheck',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
+    outputs: [],
+  },
+  {
+    name: 'getFullyPaidResult',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
+    outputs: [
+      { name: 'isPaid', type: 'bool' },
+      { name: 'decrypted', type: 'bool' },
+    ],
+  },
   // Events
   {
     name: 'InvoiceCreated',
@@ -172,6 +195,17 @@ export const CIPHERPAY_ABI = [
   },
 ] as const;
 
+// Simple contract ABI extensions (pause, resume, claim, amount queries)
+export const SIMPLE_EXTRA_ABI = [
+  { name: 'pauseInvoice', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] },
+  { name: 'resumeInvoice', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] },
+  { name: 'claimVesting', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] },
+  { name: 'getInvoiceAmount', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'getInvoiceCollected', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'collected', type: 'uint256' }, { name: 'target', type: 'uint256' }, { name: 'payerCount', type: 'uint256' }] },
+  { name: 'payInvoice', type: 'function', stateMutability: 'payable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_paymentAmount', type: 'uint256' }], outputs: [] },
+  { name: 'payInvoiceFull', type: 'function', stateMutability: 'payable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] },
+] as const;
+
 export const INVOICE_TYPE_MAP: Record<number, string> = {
   0: 'standard',
   1: 'multi-pay',
@@ -184,4 +218,5 @@ export const INVOICE_STATUS_MAP: Record<number, string> = {
   0: 'open',
   1: 'settled',
   2: 'cancelled',
+  3: 'paused',
 };
