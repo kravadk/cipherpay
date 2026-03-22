@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Lock, Zap, Repeat, History, CheckCircle, Loader2,
-  ArrowRight, ArrowLeft, Plus, Trash2, Upload, Terminal, Eye, Copy, ExternalLink
+  ArrowRight, ArrowLeft, Plus, Trash2, Upload, Terminal, Eye, Copy, ExternalLink, QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useState, useRef } from 'react';
 import { Button } from '../../components/Button';
 // Invoice data stored on-chain only — no local store for invoice persistence
@@ -58,6 +59,9 @@ export function NewCipher() {
   const { writeContractAsync } = useWriteContract();
   const { isReady: isFheReady, encrypt, getEncryptable, isConnecting: isFheConnecting } = useCofhe();
 
+  const disabledTypes = new Set<CipherType>(['vesting', 'batch']);
+  const typeWave: Record<string, string> = { vesting: 'W2', batch: 'W3' };
+
   const types: { id: CipherType; label: string; icon: any; color: string }[] = [
     { id: 'standard', label: 'Standard', icon: Shield, color: 'text-primary' },
     { id: 'multi-pay', label: 'Multi Pay', icon: Zap, color: 'text-secondary' },
@@ -90,9 +94,21 @@ export function NewCipher() {
       return;
     }
 
-    // Validate recipient if provided
+    // Validate recipient
     if (formData.recipient && !isValidAddress(formData.recipient)) {
       addToast('error', 'Invalid recipient address (must be 0x + 40 hex characters)');
+      return;
+    }
+
+    // Vesting requires recipient
+    if (type === 'vesting' && !formData.recipient) {
+      addToast('error', 'Vesting invoices require a recipient address');
+      return;
+    }
+
+    // Vesting requires unlock date
+    if (type === 'vesting' && !formData.unlockDate) {
+      addToast('error', 'Vesting invoices require an unlock date');
       return;
     }
 
@@ -189,10 +205,13 @@ export function NewCipher() {
         });
       } else {
         // Simple contract fallback — send plaintext amount
-        addLog('> Submitting invoice to Simple contract (plaintext mode)...');
+        const isVesting = type === 'vesting';
+        addLog(isVesting
+          ? `> Creating vesting escrow (${formData.amount} ETH locked until unlock block)...`
+          : '> Submitting invoice to Simple contract...');
         const { CIPHERPAY_SIMPLE_ADDRESS } = await import('../../config/contract');
         const simpleAbi = [{
-          name: 'createInvoice', type: 'function', stateMutability: 'nonpayable',
+          name: 'createInvoice', type: 'function', stateMutability: 'payable',
           inputs: [
             { name: '_amount', type: 'uint256' }, { name: '_recipient', type: 'address' },
             { name: '_invoiceType', type: 'uint8' }, { name: '_deadline', type: 'uint256' },
@@ -206,7 +225,8 @@ export function NewCipher() {
           abi: simpleAbi as any,
           functionName: 'createInvoice',
           args: [amountWei, recipient, typeToUint8(type), deadline, unlockBlock, salt, fullMemo],
-        });
+          value: isVesting ? amountWei : 0n, // Vesting: send ETH as escrow
+        } as any);
       }
 
       addLog(`> Transaction submitted: ${txHash.slice(0, 14)}...`);
@@ -219,18 +239,45 @@ export function NewCipher() {
       // Step 8: Extract invoice hash from event
       let invoiceHash = txHash; // fallback
       try {
+        // Try both FHE and Simple event signatures
+        const eventAbis = [
+          // FHE contract event
+          { name: 'InvoiceCreated', type: 'event' as const, inputs: [
+            { name: 'invoiceHash', type: 'bytes32', indexed: true },
+            { name: 'creator', type: 'address', indexed: true },
+            { name: 'invoiceType', type: 'uint8', indexed: false },
+            { name: 'recipient', type: 'address', indexed: false },
+            { name: 'deadline', type: 'uint256', indexed: false },
+            { name: 'unlockBlock', type: 'uint256', indexed: false },
+            { name: 'memo', type: 'string', indexed: false },
+          ]},
+          // Simple contract event (has amount field)
+          { name: 'InvoiceCreated', type: 'event' as const, inputs: [
+            { name: 'invoiceHash', type: 'bytes32', indexed: true },
+            { name: 'creator', type: 'address', indexed: true },
+            { name: 'invoiceType', type: 'uint8', indexed: false },
+            { name: 'recipient', type: 'address', indexed: false },
+            { name: 'amount', type: 'uint256', indexed: false },
+            { name: 'deadline', type: 'uint256', indexed: false },
+            { name: 'unlockBlock', type: 'uint256', indexed: false },
+            { name: 'memo', type: 'string', indexed: false },
+          ]},
+        ];
         for (const log of receipt.logs) {
-          try {
-            const decoded = decodeEventLog({
-              abi: CIPHERPAY_ABI as any,
-              data: log.data,
-              topics: (log as any).topics,
-            });
-            if ((decoded as any).eventName === 'InvoiceCreated') {
-              invoiceHash = (decoded.args as any).invoiceHash;
-              break;
-            }
-          } catch { /* skip non-matching logs */ }
+          for (const eventAbi of eventAbis) {
+            try {
+              const decoded = decodeEventLog({
+                abi: [eventAbi],
+                data: log.data,
+                topics: (log as any).topics,
+              });
+              if ((decoded as any).eventName === 'InvoiceCreated') {
+                invoiceHash = (decoded.args as any).invoiceHash;
+                break;
+              }
+            } catch { /* try next abi */ }
+          }
+          if (invoiceHash !== txHash) break;
         }
       } catch { /* use txHash as fallback */ }
 
@@ -330,15 +377,23 @@ export function NewCipher() {
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-white">Select Cipher Type</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {types.map((t) => (
-                    <button key={t.id} onClick={() => setType(t.id)}
-                      className={`flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-300 gap-3 ${
-                        type === t.id ? 'bg-primary/10 border-primary text-primary' : 'bg-surface-2 border-border-default text-text-secondary hover:border-primary/40'
-                      }`}>
-                      <t.icon className={`w-8 h-8 ${type === t.id ? t.color : 'text-inherit'}`} />
-                      <span className="text-xs font-bold uppercase tracking-widest">{t.label}</span>
-                    </button>
-                  ))}
+                  {types.map((t) => {
+                    const isDisabled = disabledTypes.has(t.id);
+                    return (
+                      <button key={t.id} onClick={() => !isDisabled && setType(t.id)}
+                        className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-300 gap-3 ${
+                          isDisabled ? 'bg-surface-2 border-border-default text-text-dim cursor-not-allowed opacity-50'
+                          : type === t.id ? 'bg-primary/10 border-primary text-primary'
+                          : 'bg-surface-2 border-border-default text-text-secondary hover:border-primary/40'
+                        }`}>
+                        <t.icon className={`w-8 h-8 ${isDisabled ? 'text-text-dim' : type === t.id ? t.color : 'text-inherit'}`} />
+                        <span className="text-xs font-bold uppercase tracking-widest">{t.label}</span>
+                        {typeWave[t.id] && (
+                          <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">{typeWave[t.id]}</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -352,11 +407,16 @@ export function NewCipher() {
                     />
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
-                        Recipient Address <Lock className="w-3 h-3 text-text-dim" />
+                        Recipient Address {type === 'vesting' ? <span className="text-red-400">*</span> : null} <Lock className="w-3 h-3 text-text-dim" />
                       </label>
-                      <input type="text" placeholder="0x... (optional)" value={formData.recipient}
+                      <input type="text" placeholder={type === 'vesting' ? '0x... (required for vesting)' : '0x... (optional)'} value={formData.recipient}
                         onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
-                        className="w-full h-14 px-6 bg-surface-2 border border-border-default rounded-2xl text-white font-mono focus:border-primary/40 focus:outline-none transition-colors" />
+                        className={`w-full h-14 px-6 bg-surface-2 border rounded-2xl text-white font-mono focus:border-primary/40 focus:outline-none transition-colors ${
+                          type === 'vesting' && !formData.recipient ? 'border-yellow-500/30' : 'border-border-default'
+                        }`} />
+                      {type === 'vesting' && !formData.recipient && (
+                        <p className="text-xs text-yellow-500">Vesting requires a recipient — only they can claim after unlock</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -397,12 +457,71 @@ export function NewCipher() {
 
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
-                    Memo (Optional) <Lock className="w-3 h-3 text-text-dim" />
+                    Memo (Optional) <span className="text-[9px] font-normal text-text-dim normal-case">— visible on-chain</span>
                   </label>
                   <input type="text" placeholder="What is this for?" maxLength={256} value={formData.memo}
                     onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
                     className="w-full h-14 px-6 bg-surface-2 border border-border-default rounded-2xl text-white focus:border-primary/40 focus:outline-none" />
                   <p className="text-[10px] text-text-dim text-right">{formData.memo.length}/256</p>
+                </div>
+
+                {/* Invoice Breakdown — collapsible line items */}
+                <div className="space-y-3">
+                  {!((formData as any).breakdownItems?.length > 0) ? (
+                    <button
+                      onClick={() => setFormData({ ...formData, breakdownItems: [{ label: '', amount: '' }] } as any)}
+                      className="w-full flex items-center justify-center gap-2 py-3 text-xs text-text-muted hover:text-primary border border-dashed border-border-default hover:border-primary/30 rounded-xl transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Invoice Breakdown
+                    </button>
+                  ) : (<>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
+                      Breakdown <Lock className="w-3 h-3 text-text-dim" />
+                    </label>
+                    <span className="text-[9px] text-text-dim">{(formData as any).breakdownItems?.length || 0} items — each encrypted via FHE</span>
+                  </div>
+                  {(formData as any).breakdownItems?.map((item: any, i: number) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        value={item.label}
+                        onChange={(e) => {
+                          const items = [...((formData as any).breakdownItems || [])];
+                          items[i] = { ...items[i], label: e.target.value };
+                          setFormData({ ...formData, breakdownItems: items } as any);
+                        }}
+                        placeholder="Item name"
+                        className="flex-1 h-14 px-6 bg-surface-2 border border-border-default rounded-2xl text-white focus:border-primary/40 focus:outline-none"
+                      />
+                      <input
+                        value={item.amount}
+                        onChange={(e) => {
+                          const items = [...((formData as any).breakdownItems || [])];
+                          items[i] = { ...items[i], amount: e.target.value };
+                          setFormData({ ...formData, breakdownItems: items } as any);
+                        }}
+                        placeholder="0.01"
+                        type="number"
+                        step="0.000001"
+                        className="w-32 h-14 px-6 bg-surface-2 border border-border-default rounded-2xl text-white text-right focus:border-primary/40 focus:outline-none"
+                      />
+                      <span className="flex items-center text-xs text-text-muted">ETH</span>
+                      <button onClick={() => {
+                        const items = ((formData as any).breakdownItems || []).filter((_: any, idx: number) => idx !== i);
+                        setFormData({ ...formData, breakdownItems: items } as any);
+                      }} className="px-2 text-red-500 hover:bg-red-500/10 rounded-lg text-sm">×</button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const items = [...((formData as any).breakdownItems || []), { label: '', amount: '' }];
+                      setFormData({ ...formData, breakdownItems: items } as any);
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    + Add Line Item
+                  </button>
+                  </>)}
                 </div>
 
                 {type === 'multi-pay' && (
@@ -481,30 +600,72 @@ export function NewCipher() {
                 {type === 'vesting' && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-text-muted uppercase tracking-widest">Unlock Date</label>
-                      <DatePicker
-                        value={formData.unlockDate}
-                        onChange={(val) => setFormData({ ...formData, unlockDate: val })}
-                        minDate={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                        placeholder="Select unlock date"
-                      />
+                      <label className="text-xs font-bold text-text-muted uppercase tracking-widest">Unlock Date & Time</label>
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <DatePicker
+                            value={formData.unlockDate?.split('T')[0] || ''}
+                            onChange={(val) => {
+                              const time = formData.unlockDate?.includes('T') ? formData.unlockDate.split('T')[1] : '12:00';
+                              setFormData({ ...formData, unlockDate: `${val}T${time}` });
+                            }}
+                            minDate={new Date().toISOString().split('T')[0]}
+                            placeholder="Select date"
+                          />
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <select
+                            value={formData.unlockDate?.includes('T') ? formData.unlockDate.split('T')[1]?.split(':')[0] || '12' : '12'}
+                            onChange={(e) => {
+                              const date = formData.unlockDate?.split('T')[0] || new Date().toISOString().split('T')[0];
+                              const min = formData.unlockDate?.includes('T') ? formData.unlockDate.split('T')[1]?.split(':')[1] || '00' : '00';
+                              setFormData({ ...formData, unlockDate: `${date}T${e.target.value}:${min}` });
+                            }}
+                            className="h-14 px-3 bg-surface-2 border border-border-default rounded-xl text-white text-center focus:border-primary/40 focus:outline-none appearance-none"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>
+                            ))}
+                          </select>
+                          <span className="text-text-muted font-bold">:</span>
+                          <select
+                            value={formData.unlockDate?.includes('T') ? formData.unlockDate.split('T')[1]?.split(':')[1] || '00' : '00'}
+                            onChange={(e) => {
+                              const date = formData.unlockDate?.split('T')[0] || new Date().toISOString().split('T')[0];
+                              const hr = formData.unlockDate?.includes('T') ? formData.unlockDate.split('T')[1]?.split(':')[0] || '12' : '12';
+                              setFormData({ ...formData, unlockDate: `${date}T${hr}:${e.target.value}` });
+                            }}
+                            className="h-14 px-3 bg-surface-2 border border-border-default rounded-xl text-white text-center focus:border-primary/40 focus:outline-none appearance-none"
+                          >
+                            {Array.from({ length: 60 }, (_, i) => (
+                              <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                     </div>
                     {formData.unlockDate && (
                       <div className="p-4 bg-surface-2 border border-border-default rounded-2xl space-y-3">
                         <div className="flex justify-between text-sm">
                           <span className="text-text-muted">Estimated Unlock Block</span>
-                          <span className="text-white font-mono">~{Math.floor((new Date(formData.unlockDate).getTime() - Date.now()) / 12000)} blocks from now</span>
+                          <span className="text-white font-mono">~{Math.max(0, Math.floor((new Date(formData.unlockDate).getTime() - Date.now()) / 12000))} blocks from now</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-text-muted">Unlock Time</span>
+                          <span className="text-white">
+                            {new Date(formData.unlockDate).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
                         <div className="w-full h-2 bg-surface-3 rounded-full overflow-hidden">
                           <div className="h-full bg-yellow-500/50 rounded-full" style={{ width: '0%' }} />
                         </div>
                         <div className="flex justify-between text-[10px] text-text-dim">
-                          <span>Today</span>
-                          <span>{new Date(formData.unlockDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span>Now</span>
+                          <span>{new Date(formData.unlockDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </div>
                     )}
-                    <p className="text-xs text-text-muted">✦ Perfect for contractor milestone payments</p>
+                    <p className="text-xs text-text-muted">Perfect for contractor milestone payments</p>
                   </div>
                 )}
 
@@ -723,11 +884,25 @@ export function NewCipher() {
                 <div className="space-y-1">
                   <p className="text-[10px] text-text-muted uppercase tracking-widest">Payment Link</p>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-mono text-text-secondary break-all">{window.location.origin}/pay/{deployedHash}</p>
-                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/pay/${deployedHash}`); addToast('success', 'Link copied'); }}
+                    <p className="text-xs font-mono text-text-secondary break-all">{window.location.origin}/pay/{deployedHash}?amount={formData.amount}</p>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/pay/${deployedHash}?amount=${formData.amount}`); addToast('success', 'Link copied'); }}
                       className="p-2 text-text-muted hover:text-primary shrink-0"><Copy className="w-4 h-4" /></button>
                   </div>
                 </div>
+              </div>
+
+              {/* QR Code for payment link */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-4 bg-white rounded-2xl">
+                  <QRCodeSVG
+                    value={`${window.location.origin}/pay/${deployedHash}?amount=${formData.amount}`}
+                    size={160}
+                    bgColor="white"
+                    fgColor="black"
+                    level="M"
+                  />
+                </div>
+                <p className="text-[10px] text-text-dim">Scan to open payment page</p>
               </div>
               <div className="flex gap-4">
                 <Button variant="outline" onClick={() => navigate('/app/dashboard')} className="gap-2">

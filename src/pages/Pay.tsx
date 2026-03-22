@@ -12,19 +12,25 @@ import { formatEther, parseEther } from 'viem';
 import { useEthPrice } from '../hooks/useEthPrice';
 import { AmountInput } from '../components/AmountInput';
 import { useCofhe } from '../hooks/useCofhe';
+import { useToastStore } from '../components/ToastContainer';
+import { QRCodeSVG } from 'qrcode.react';
 
 type PayStatus = 'idle' | 'loading' | 'ready' | 'paying' | 'success' | 'error' | 'not-found';
 
 export function Pay() {
   const { hash } = useParams<{ hash: string }>();
+  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  const urlAmount = searchParams.get('amount');
   const { isConnected, address } = useAccount();
   const publicClient = usePublicClient();
   const { isDeployed } = useContractStatus();
   const { writeContractAsync } = useWriteContract();
   const { ethToUsd, price } = useEthPrice();
   const { isReady: isFheReady, encrypt, getEncryptable } = useCofhe();
+  const { addToast } = useToastStore();
 
   const [payStatus, setPayStatus] = useState<PayStatus>('loading');
+  const [invoiceContract, setInvoiceContract] = useState<string>(CIPHERPAY_SIMPLE_ADDRESS);
   const [invoice, setInvoice] = useState<any>(null);
   const [invoiceAmount, setInvoiceAmount] = useState<string | null>(null);
   const [collected, setCollected] = useState<{ collected: string; target: string; payerCount: number } | null>(null);
@@ -47,18 +53,34 @@ export function Pay() {
 
     async function loadInvoice() {
       try {
-        const data = await publicClient!.readContract({
-          address: CIPHERPAY_ADDRESS,
-          abi: CIPHERPAY_ABI as any,
-          functionName: 'getInvoice',
-          args: [hash as `0x${string}`],
-        }) as unknown as any[];
+        // Try FHE contract first, then Simple fallback
+        let data: any[] | null = null;
+        let activeContract = CIPHERPAY_ADDRESS;
 
-        const creator = data[0] as string;
-        if (creator === '0x0000000000000000000000000000000000000000') {
+        for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {
+          try {
+            const result = await publicClient!.readContract({
+              address: contractAddr,
+              abi: CIPHERPAY_ABI as any,
+              functionName: 'getInvoice',
+              args: [hash as `0x${string}`],
+            }) as unknown as any[];
+            const creator = result[0] as string;
+            if (creator !== '0x0000000000000000000000000000000000000000') {
+              data = result;
+              activeContract = contractAddr;
+              setInvoiceContract(contractAddr);
+              break;
+            }
+          } catch { /* try next contract */ }
+        }
+
+        if (!data) {
           setPayStatus('not-found');
           return;
         }
+
+        const creator = data[0] as string;
 
         const invoiceData = {
           creator,
@@ -72,53 +94,54 @@ export function Pay() {
         };
         setInvoice(invoiceData);
 
-        // Amount is FHE-encrypted — show as hidden
-        // Try to get encrypted handle (FHE contract)
+        // Try Simple contract first (plaintext amount), then FHE
+        let knownAmount: string | null = null;
         try {
-          const handle = await publicClient!.readContract({
-            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-            functionName: 'getEncryptedAmount', args: [hash as `0x${string}`],
+          const simpleAbi = [{ name: 'getInvoiceAmount', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: '', type: 'uint256' }] }] as const;
+          const amountRaw = await publicClient!.readContract({
+            address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleAbi as any,
+            functionName: 'getInvoiceAmount', args: [hash as `0x${string}`],
           }) as bigint;
-          // Amount is encrypted — cannot show plaintext without permit
-          setInvoiceAmount(null);
-        } catch {
-          // Fallback: try Simple contract's plaintext amount
+          if (amountRaw > 0n) {
+            knownAmount = formatEther(amountRaw);
+            setInvoiceAmount(knownAmount);
+            setPayAmount(knownAmount);
+          }
+        } catch {}
+
+        // If no plaintext amount found, use URL amount or try FHE handle
+        if (!knownAmount && urlAmount && parseFloat(urlAmount) > 0) {
+          knownAmount = urlAmount;
+          setInvoiceAmount(urlAmount);
+          setPayAmount(urlAmount);
+        }
+        if (!knownAmount) {
           try {
-            const { CIPHERPAY_SIMPLE_ADDRESS } = await import('../config/contract');
-            const simpleAbi = [{ name: 'getInvoiceAmount', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: '', type: 'uint256' }] }] as const;
-            const amountRaw = await publicClient!.readContract({
-              address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleAbi as any,
-              functionName: 'getInvoiceAmount', args: [hash as `0x${string}`],
-            }) as bigint;
-            setInvoiceAmount(formatEther(amountRaw));
+            await publicClient!.readContract({
+              address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+              functionName: 'getEncryptedAmount', args: [hash as `0x${string}`],
+            });
+            // FHE — amount encrypted
+            setInvoiceAmount(null);
           } catch {}
         }
 
-        // Read payer count (public on FHE contract)
-        try {
-          const count = await publicClient!.readContract({
-            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-            functionName: 'getPayerCount', args: [hash as `0x${string}`],
-          }) as bigint;
-          setCollected({
-            collected: '••••••',
-            target: '••••••',
-            payerCount: Number(count),
-          });
-        } catch {
-          // Fallback: try Simple contract
+        // Read collected data — try Simple first (has plaintext), then FHE
+        const collectedAbi = [{ name: 'getInvoiceCollected', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'collected', type: 'uint256' }, { name: 'target', type: 'uint256' }, { name: 'payerCount', type: 'uint256' }] }] as const;
+        for (const addr of [CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ADDRESS]) {
           try {
-            const { CIPHERPAY_SIMPLE_ADDRESS } = await import('../config/contract');
-            const simpleAbi = [{ name: 'getInvoiceCollected', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'collected', type: 'uint256' }, { name: 'target', type: 'uint256' }, { name: 'payerCount', type: 'uint256' }] }] as const;
             const collectedData = await publicClient!.readContract({
-              address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleAbi as any,
+              address: addr, abi: collectedAbi as any,
               functionName: 'getInvoiceCollected', args: [hash as `0x${string}`],
             }) as unknown as any[];
-            setCollected({
-              collected: formatEther(BigInt(collectedData[0])),
-              target: formatEther(BigInt(collectedData[1])),
-              payerCount: Number(collectedData[2]),
-            });
+            if (Number(collectedData[1]) > 0) {
+              setCollected({
+                collected: formatEther(BigInt(collectedData[0])),
+                target: formatEther(BigInt(collectedData[1])),
+                payerCount: Number(collectedData[2]),
+              });
+              break;
+            }
           } catch {}
         }
 
@@ -143,11 +166,69 @@ export function Pay() {
   const isAuthorizedPayer = !recipientRestricted || invoice?.recipient?.toLowerCase() === address?.toLowerCase();
   const isCreator = invoice?.creator?.toLowerCase() === address?.toLowerCase();
 
-  // For multipay: payer count is public, amounts are encrypted
-  const progressPct = 0; // Cannot calculate without decryption
-  const remaining = 0;
+  // Vesting lock check
+  const isVesting = invoice?.invoiceType === 3;
+  const unlockBlock = invoice?.unlockBlock ? Number(invoice.unlockBlock) : 0;
+  const [currentBlock, setCurrentBlock] = useState(0);
+  const [blocksRemaining, setBlocksRemaining] = useState(0);
+  const isLocked = isVesting && unlockBlock > 0 && currentBlock < unlockBlock;
 
-  const handlePay = async () => {
+  useEffect(() => {
+    if (!publicClient || !isVesting || unlockBlock === 0) return;
+    const checkBlock = async () => {
+      const block = Number(await publicClient.getBlockNumber());
+      setCurrentBlock(block);
+      setBlocksRemaining(Math.max(0, unlockBlock - block));
+    };
+    checkBlock();
+    const interval = setInterval(checkBlock, 12000); // check every block
+    return () => clearInterval(interval);
+  }, [publicClient, isVesting, unlockBlock]);
+
+  // For multipay: calculate progress from collected data
+  const collectedNum = collected ? parseFloat(collected.collected) : 0;
+  const targetNum = collected ? parseFloat(collected.target) : 0;
+  const progressPct = targetNum > 0 ? Math.min(100, (collectedNum / targetNum) * 100) : 0;
+  const remaining = Math.max(0, targetNum - collectedNum);
+
+  const handleClaimVesting = async () => {
+    if (!address || !hash || !publicClient) return;
+    setPayStatus('paying');
+    setPayLogs([]);
+    setPayError(null);
+    try {
+      addLog('> Claiming vesting funds...');
+      const claimAbi = [{
+        name: 'claimVesting', type: 'function', stateMutability: 'nonpayable',
+        inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [],
+      }] as const;
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS, abi: claimAbi as any,
+        functionName: 'claimVesting', args: [hash as `0x${string}`],
+      });
+      addLog(`> Transaction: ${tx.slice(0, 14)}...`);
+      addLog('> Awaiting confirmation...');
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
+      if (receipt.status === 'reverted') throw new Error('Transaction reverted');
+      addLog(`> ✓ Vesting claimed in block ${receipt.blockNumber}`);
+      setTxHash(tx);
+      setPayStatus('success');
+      addToast('success', `Vesting claimed — ${invoiceAmount || ''} ETH received!`);
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Claim failed';
+      let userMsg = msg;
+      if (msg.includes('User rejected') || msg.includes('denied')) userMsg = 'Transaction cancelled';
+      else if (msg.includes('Still locked')) userMsg = 'Vesting is still locked — wait for unlock block';
+      else if (msg.includes('Only recipient')) userMsg = 'Only the designated recipient can claim';
+      else if (msg.includes('Not vesting')) userMsg = 'This invoice is not a vesting type';
+      addLog(`> ✗ ${userMsg}`);
+      setPayError(userMsg);
+      setPayStatus('error');
+      addToast('error', userMsg);
+    }
+  };
+
+  const handlePay = async (overrideAmount?: string) => {
     if (!address || !hash || !publicClient) return;
 
     setPayStatus('paying');
@@ -155,7 +236,7 @@ export function Pay() {
     setPayError(null);
 
     try {
-      const amountToPay = isMultiPay ? payAmount : (invoiceAmount || payAmount);
+      const amountToPay = overrideAmount || (isMultiPay ? payAmount : (invoiceAmount || payAmount));
       if (!amountToPay || parseFloat(amountToPay) <= 0) {
         throw new Error('Please enter a valid amount');
       }
@@ -184,25 +265,14 @@ export function Pay() {
 
       let tx: `0x${string}`;
 
-      if (useFhe && encryptedPayment) {
-        // FHE contract: send InEuint64 tuple
-        addLog('> Submitting encrypted payment...');
-        const encTuple = {
-          ctHash: BigInt(encryptedPayment.ctHash || encryptedPayment.data?.ctHash || 0),
-          securityZone: encryptedPayment.securityZone ?? encryptedPayment.data?.securityZone ?? 0,
-          utype: encryptedPayment.utype ?? encryptedPayment.data?.utype ?? 5,
-          signature: encryptedPayment.signature ?? encryptedPayment.data?.signature ?? '0x',
-        };
-        tx = await writeContractAsync({
-          address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-          functionName: 'payInvoice',
-          args: [hash as `0x${string}`, encTuple],
-        });
-      } else {
-        // Simple contract fallback: send plaintext uint256
-        addLog('> Submitting payment (Simple contract)...');
+      // Pay on the same contract where invoice was created
+      const isSimpleInvoice = invoiceContract === CIPHERPAY_SIMPLE_ADDRESS;
+
+      if (isSimpleInvoice) {
+        // Simple contract: send real ETH (payable)
+        addLog(`> Sending ${amountToPay} ETH to invoice creator...`);
         const simplePayAbi = [{
-          name: 'payInvoice', type: 'function', stateMutability: 'nonpayable',
+          name: 'payInvoice', type: 'function', stateMutability: 'payable',
           inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_paymentAmount', type: 'uint256' }],
           outputs: [],
         }] as const;
@@ -210,7 +280,26 @@ export function Pay() {
           address: CIPHERPAY_SIMPLE_ADDRESS, abi: simplePayAbi as any,
           functionName: 'payInvoice',
           args: [hash as `0x${string}`, amountWei],
-        });
+          value: amountWei,
+        } as any);
+      } else {
+        // FHE contract: send encrypted payment (no ETH value — amounts are on-chain ciphertext)
+        if (useFhe && encryptedPayment) {
+          addLog('> Submitting FHE-encrypted payment...');
+          const encTuple = {
+            ctHash: BigInt(encryptedPayment.ctHash || encryptedPayment.data?.ctHash || 0),
+            securityZone: encryptedPayment.securityZone ?? encryptedPayment.data?.securityZone ?? 0,
+            utype: encryptedPayment.utype ?? encryptedPayment.data?.utype ?? 5,
+            signature: encryptedPayment.signature ?? encryptedPayment.data?.signature ?? '0x',
+          };
+          tx = await writeContractAsync({
+            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+            functionName: 'payInvoice',
+            args: [hash as `0x${string}`, encTuple],
+          });
+        } else {
+          throw new Error('FHE encryption required for this invoice but SDK not ready');
+        }
       }
 
       addLog(`> Transaction: ${tx.slice(0, 14)}...`);
@@ -220,6 +309,7 @@ export function Pay() {
       addLog(`> ✓ Confirmed in block ${receipt.blockNumber}`);
       setTxHash(tx);
       setPayStatus('success');
+      addToast('success', `Payment of ${amountToPay} ETH confirmed!`);
     } catch (err: any) {
       console.error('[Pay] Error:', err);
       const msg = err.shortMessage || err.message || 'Payment failed';
@@ -234,18 +324,20 @@ export function Pay() {
       addLog(`> ✗ ${userMsg}`);
       setPayError(userMsg);
       setPayStatus('error');
+      addToast('error', userMsg);
     }
   };
 
   return (
     <div className="min-h-screen bg-bg-base flex flex-col">
-      <div className="px-8 py-6">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center rotate-45">
-            <div className="w-3 h-3 bg-black rounded-sm -rotate-45" />
-          </div>
+      <div className="px-8 py-6 flex items-center justify-between">
+        <a href="/app/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <img src="/logo.png" alt="CipherPay" className="w-6 h-6 rounded-md" />
           <span className="text-sm font-bold text-white tracking-tight">CipherPay · Pay</span>
-        </div>
+        </a>
+        <a href="/app/dashboard" className="text-xs text-text-muted hover:text-primary transition-colors">
+          ← Go to Dashboard
+        </a>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8">
@@ -288,6 +380,7 @@ export function Pay() {
                     <div className="flex items-center gap-2">
                       {invoice.status === 0 ? <><Clock className="w-3.5 h-3.5 text-secondary" /><span className="text-xs font-bold text-secondary uppercase">Open</span></>
                         : invoice.status === 1 ? <><CheckCircle className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-bold text-primary uppercase">Settled</span></>
+                        : invoice.status === 3 ? <><Clock className="w-3.5 h-3.5 text-orange-500" /><span className="text-xs font-bold text-orange-500 uppercase">Paused</span></>
                         : <><XCircle className="w-3.5 h-3.5 text-text-muted" /><span className="text-xs font-bold text-text-muted uppercase">Cancelled</span></>}
                     </div>
                   </div>
@@ -314,6 +407,38 @@ export function Pay() {
                     </div>
                   </div>
                 </div>
+
+                {/* Vesting lock status */}
+                {isVesting && unlockBlock > 0 && (
+                  <div className={`p-5 ${isLocked ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-primary/5 border-primary/20'} border rounded-2xl space-y-3`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Lock className={`w-4 h-4 ${isLocked ? 'text-yellow-500' : 'text-primary'}`} />
+                        <span className={`text-sm font-bold ${isLocked ? 'text-yellow-400' : 'text-primary'}`}>
+                          {isLocked ? 'Vesting Locked' : 'Unlocked — Ready to Pay'}
+                        </span>
+                      </div>
+                    </div>
+                    {isLocked ? (
+                      <>
+                        <div className="w-full h-3 bg-surface-3 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${unlockBlock > 0 ? Math.min(100, (currentBlock / unlockBlock) * 100) : 0}%` }}
+                            className="h-full bg-yellow-500 rounded-full"
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-yellow-400 font-bold">{blocksRemaining} blocks remaining</span>
+                          <span className="text-text-muted">~{Math.ceil(blocksRemaining * 12 / 60)} min</span>
+                        </div>
+                        <p className="text-xs text-text-muted">Block {currentBlock.toLocaleString()} / {unlockBlock.toLocaleString()}</p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-text-muted">Unlock block {unlockBlock.toLocaleString()} reached. Payment is now available.</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Multipay progress */}
                 {isMultiPay && collected && (
@@ -357,33 +482,130 @@ export function Pay() {
                           <p className="text-sm text-red-300">This invoice is assigned to a different address.</p>
                         </div>
                       )}
-                      {isCreator && !isMultiPay && (
+                      {isCreator && !isMultiPay && !isVesting && (
                         <div className="flex items-center gap-3 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl">
                           <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
                           <p className="text-sm text-yellow-300">You are the creator. Share the payment link with the payer.</p>
                         </div>
                       )}
+                      {isVesting && isCreator && (
+                        <div className="flex items-center gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl">
+                          <Lock className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                          <p className="text-sm text-blue-300">You funded this vesting invoice. Share the link with the recipient — they can claim after unlock.</p>
+                        </div>
+                      )}
 
-                      {/* Amount input — always shown since FHE amounts are encrypted */}
-                      <AmountInput
-                        value={payAmount}
-                        onChange={setPayAmount}
-                        label={isMultiPay ? 'Your Contribution' : 'Payment Amount'}
-                        placeholder={invoiceAmount || '0.01'}
-                      />
-                      <Button className="w-full h-14 text-lg" onClick={handlePay}
-                        disabled={!isAuthorizedPayer || !payAmount || parseFloat(payAmount) <= 0}>
-                        {!isAuthorizedPayer ? 'Not Authorized' : isMultiPay ? `Contribute ${payAmount || '...'} ETH →` : `Pay ${payAmount || '...'} ETH →`}
-                      </Button>
+                      {/* Amount input — hidden for vesting (pre-funded by creator) */}
+                      {!isVesting && (<>
+                        {/* Quick pay button for non-multipay when amount is known */}
+                        {!isMultiPay && invoiceAmount && parseFloat(invoiceAmount) > 0 && (
+                          <Button
+                            className="w-full h-14 text-lg"
+                            onClick={() => handlePay(invoiceAmount)}
+                            disabled={!isAuthorizedPayer}
+                          >
+                            {!isAuthorizedPayer ? 'Not Authorized' : `Pay ${invoiceAmount} ETH →`}
+                          </Button>
+                        )}
+
+                        {/* Manual amount input — shown for multipay always, for others when amount unknown */}
+                        {(isMultiPay || !invoiceAmount || parseFloat(invoiceAmount) <= 0) && (<>
+                        <AmountInput
+                          value={payAmount}
+                          onChange={setPayAmount}
+                          label={isMultiPay ? 'Your Contribution' : 'Payment Amount'}
+                          placeholder={invoiceAmount || '0.01'}
+                        />
+                        {/* Info when amount is unknown (FHE encrypted, no URL param) */}
+                        {!isMultiPay && !invoiceAmount && (
+                          <p className="text-xs text-text-muted">Amount is FHE-encrypted. Enter the amount agreed with the invoice creator.</p>
+                        )}
+                        </>)}
+                        {/* Multi Pay: suggest remaining amount */}
+                        {isMultiPay && collected && parseFloat(collected.target) > 0 && (
+                          <div className="space-y-2">
+                            {parseFloat(collected.collected) < parseFloat(collected.target) && (
+                              <div className="flex flex-wrap gap-2">
+                                {(() => {
+                                  const rem = parseFloat(collected.target) - parseFloat(collected.collected);
+                                  const suggestions = [
+                                    { label: 'Remaining', value: rem },
+                                    ...(rem > 0.002 ? [{ label: '50%', value: rem * 0.5 }] : []),
+                                    ...(rem > 0.004 ? [{ label: '25%', value: rem * 0.25 }] : []),
+                                  ];
+                                  return suggestions.map(s => (
+                                    <button key={s.label}
+                                      onClick={() => setPayAmount(s.value.toFixed(6))}
+                                      className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                                        payAmount === s.value.toFixed(6)
+                                          ? 'bg-primary text-black border-primary'
+                                          : 'bg-surface-2 border-border-default text-text-secondary hover:border-primary/30'
+                                      }`}>
+                                      {s.label} ({s.value.toFixed(4)} ETH)
+                                    </button>
+                                  ));
+                                })()}
+                              </div>
+                            )}
+                            {parseFloat(collected.collected) >= parseFloat(collected.target) && (
+                              <p className="text-xs text-primary font-bold">Target reached — waiting for creator to settle</p>
+                            )}
+                          </div>
+                        )}
+                      </>)}
+                      {isVesting ? (
+                        <Button className="w-full h-14 text-lg" onClick={handleClaimVesting}
+                          disabled={isLocked || !isAuthorizedPayer}>
+                          {isLocked ? `Locked — ${blocksRemaining} blocks (~${Math.ceil(blocksRemaining * 12 / 60)} min)`
+                            : !isAuthorizedPayer ? 'Only recipient can claim'
+                            : `Claim ${invoiceAmount || '...'} ETH →`}
+                        </Button>
+                      ) : (isMultiPay || !invoiceAmount || parseFloat(invoiceAmount) <= 0) ? (
+                        <Button className="w-full h-14 text-lg" onClick={() => handlePay()}
+                          disabled={!isAuthorizedPayer || !payAmount || parseFloat(payAmount) <= 0}>
+                          {!isAuthorizedPayer ? 'Not Authorized'
+                            : isMultiPay ? `Contribute ${payAmount || '...'} ETH →`
+                            : `Pay ${payAmount || '...'} ETH →`}
+                        </Button>
+                      ) : null}
                     </div>
                   )}
 
                   {payStatus === 'paying' && (
-                    <div className="p-4 bg-black rounded-xl font-mono text-xs space-y-1 max-h-40 overflow-y-auto">
-                      {payLogs.map((log, i) => (
-                        <p key={i} className={log.includes('✓') ? 'text-primary' : log.includes('✗') ? 'text-red-400' : 'text-text-secondary'}>{log}</p>
-                      ))}
-                      <motion.div animate={{ opacity: [1, 0] }} transition={{ duration: 0.8, repeat: Infinity }} className="inline-block w-2 h-4 bg-primary ml-1" />
+                    <div className="space-y-4">
+                      {/* Progress stepper */}
+                      <div className="flex items-center justify-between px-2">
+                        {[
+                          { label: 'Encrypting', done: payLogs.some(l => l.includes('encrypted') || l.includes('Sending') || l.includes('Submitting')) },
+                          { label: 'Submitting', done: payLogs.some(l => l.includes('Transaction:') || l.includes('Awaiting')) },
+                          { label: 'Confirming', done: payLogs.some(l => l.includes('Confirmed') || l.includes('✓ Confirmed')) },
+                        ].map((step, i, arr) => (
+                          <div key={i} className="flex items-center gap-2 flex-1">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
+                              step.done ? 'bg-primary' : i === 0 || arr[i-1]?.done ? 'bg-primary/20 border-2 border-primary' : 'bg-surface-3 border border-border-default'
+                            }`}>
+                              {step.done ? (
+                                <motion.svg initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                                  <motion.path initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.3 }} d="M5 13l4 4L19 7" />
+                                </motion.svg>
+                              ) : (i === 0 || arr[i-1]?.done) ? (
+                                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                              ) : (
+                                <span className="text-[10px] text-text-dim font-bold">{i + 1}</span>
+                              )}
+                            </div>
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${step.done ? 'text-primary' : 'text-text-muted'}`}>{step.label}</span>
+                            {i < arr.length - 1 && <div className={`flex-1 h-px mx-2 ${step.done ? 'bg-primary' : 'bg-border-default'}`} />}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Terminal logs */}
+                      <div className="p-4 bg-black rounded-xl font-mono text-xs space-y-1 max-h-32 overflow-y-auto">
+                        {payLogs.map((log, i) => (
+                          <p key={i} className={log.includes('✓') ? 'text-primary' : log.includes('✗') ? 'text-red-400' : 'text-text-secondary'}>{log}</p>
+                        ))}
+                        <motion.div animate={{ opacity: [1, 0] }} transition={{ duration: 0.8, repeat: Infinity }} className="inline-block w-2 h-4 bg-primary ml-1" />
+                      </div>
                     </div>
                   )}
 
@@ -412,18 +634,45 @@ export function Pay() {
                           </p>
                         )}
                       </div>
+                      {/* Payment Receipt QR */}
+                      <div className="flex justify-center p-4 bg-white rounded-2xl">
+                        <QRCodeSVG
+                          value={`${window.location.origin}/pay/${hash}?tx=${txHash}`}
+                          size={140}
+                          bgColor="white"
+                          fgColor="black"
+                          level="M"
+                        />
+                      </div>
+                      <p className="text-[10px] text-text-dim text-center">Scan to verify this payment on-chain</p>
+
                       <div className="p-4 bg-surface-2 border border-border-default rounded-2xl space-y-3">
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-text-muted">Transaction</span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono text-text-secondary">{txHash.slice(0, 10)}...</span>
-                            <button onClick={() => navigator.clipboard.writeText(txHash)} className="text-text-muted hover:text-primary"><Copy className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => { navigator.clipboard.writeText(txHash); addToast('success', 'TX hash copied'); }} className="text-text-muted hover:text-primary"><Copy className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-text-muted">Invoice</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-text-secondary">{hash?.slice(0, 10)}...</span>
+                            <button onClick={() => { navigator.clipboard.writeText(hash || ''); addToast('success', 'Invoice hash copied'); }} className="text-text-muted hover:text-primary"><Copy className="w-3.5 h-3.5" /></button>
                           </div>
                         </div>
                         <a href={`${FHENIX_EXPLORER_URL}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-primary hover:underline">
                           View on Etherscan <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
+
+                      <button onClick={() => {
+                        const receiptUrl = `${window.location.origin}/pay/${hash}?tx=${txHash}`;
+                        navigator.clipboard.writeText(receiptUrl);
+                        addToast('success', 'Receipt link copied');
+                      }} className="w-full flex items-center justify-center gap-2 py-3 text-sm font-bold text-primary hover:bg-primary/10 rounded-xl border border-primary/20 transition-colors">
+                        <Copy className="w-4 h-4" /> Copy Receipt Link
+                      </button>
                     </div>
                   )}
                 </>
@@ -433,6 +682,14 @@ export function Pay() {
                 <div className="flex flex-col items-center gap-3 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
                   <CheckCircle className="w-8 h-8 text-primary" />
                   <p className="text-sm text-text-secondary">This invoice has been settled</p>
+                </div>
+              )}
+
+              {invoice.status === 3 && (
+                <div className="flex flex-col items-center gap-3 p-6 bg-orange-500/5 border border-orange-500/20 rounded-2xl">
+                  <Clock className="w-8 h-8 text-orange-500" />
+                  <p className="text-sm text-text-secondary">This invoice is paused by the creator</p>
+                  <p className="text-xs text-text-muted">Payments are temporarily disabled</p>
                 </div>
               )}
 

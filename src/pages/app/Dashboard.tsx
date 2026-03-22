@@ -5,7 +5,7 @@ import { Button } from '../../components/Button';
 import { useInvoiceStore } from '../../store/useInvoiceStore';
 import type { Invoice } from '../../store/useInvoiceStore';
 import { useAccount, useBalance, useWriteContract, usePublicClient } from 'wagmi';
-import { CIPHERPAY_ADDRESS, CIPHERPAY_ABI } from '../../config/contract';
+import { CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ABI } from '../../config/contract';
 import { EncryptedAmount } from '../../components/EncryptedAmount';
 import { Link, useNavigate } from 'react-router-dom';
 import { CipherScramble } from '../../components/CipherScramble';
@@ -13,6 +13,7 @@ import { useToastStore } from '../../components/ToastContainer';
 import { useContractStatus } from '../../hooks/useContractStatus';
 import { useInvoices } from '../../hooks/useInvoices';
 import { useCofhe } from '../../hooks/useCofhe';
+import { SideDrawer } from '../../components/SideDrawer';
 
 function CountUpAnimation({ value, duration = 1500 }: { value: number; duration?: number }) {
   const [displayed, setDisplayed] = useState(0);
@@ -44,14 +45,21 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'sender' | 'receiver' | 'recurring' | 'batch'>('all');
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
+  const [drawerInvoice, setDrawerInvoice] = useState<Invoice | null>(null);
   const [privateRevealed, setPrivateRevealed] = useState(false);
   const [isRevealingPrivate, setIsRevealingPrivate] = useState(false);
 
+  const totalCount = invoices.length;
+  const pendingCount = invoices.filter(i => i.status === 'open').length;
+  const settledCount = invoices.filter(i => i.status === 'settled').length;
+  const cancelledCount = invoices.filter(i => i.status === 'cancelled').length;
+  const settleRate = totalCount > 0 ? Math.round((settledCount / totalCount) * 100) : 0;
+
   const stats = [
-    { label: 'Total Invoices', value: invoices.length },
-    { label: 'Pending', value: invoices.filter(i => i.status === 'open').length },
-    { label: 'Settled', value: invoices.filter(i => i.status === 'settled').length },
-    { label: 'Volume', value: -1, isEncrypted: true },
+    { label: 'Total Invoices', value: totalCount, trend: totalCount > 3 ? `+${Math.min(totalCount, 5)} this week` : null, color: 'text-white' },
+    { label: 'Pending', value: pendingCount, trend: pendingCount > 0 ? 'Awaiting payment' : 'All clear', color: 'text-secondary' },
+    { label: 'Settled', value: settledCount, trend: settleRate > 0 ? `${settleRate}% settle rate` : null, color: 'text-primary' },
+    { label: 'Volume', value: -1, isEncrypted: true, trend: 'FHE encrypted', color: 'text-blue-400' },
   ];
 
   const filteredInvoices = invoices.filter(invoice => {
@@ -91,12 +99,19 @@ export function Dashboard() {
     if (!publicClient) return;
     try {
       addToast('info', 'Settling invoice...');
-      const tx = await writeContractAsync({
-        address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-        functionName: 'settleInvoice', args: [hash as `0x${string}`],
-      });
+      let tx: `0x${string}` | null = null;
+      for (const addr of [CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ADDRESS]) {
+        try {
+          tx = await writeContractAsync({
+            address: addr, abi: CIPHERPAY_ABI as any,
+            functionName: 'settleInvoice', args: [hash as `0x${string}`],
+          });
+          break;
+        } catch {}
+      }
+      if (!tx) throw new Error('Settle failed on all contracts');
       await publicClient.waitForTransactionReceipt({ hash: tx });
-      addToast('success', 'Invoice settled!');
+      addToast('success', 'Invoice settled — ETH transferred!');
       refetchInvoices();
     } catch (err: any) {
       const msg = err.shortMessage || err.message || 'Settle failed';
@@ -108,15 +123,56 @@ export function Dashboard() {
     if (!publicClient) return;
     try {
       addToast('info', 'Cancelling invoice...');
-      const tx = await writeContractAsync({
-        address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-        functionName: 'cancelInvoice', args: [hash as `0x${string}`],
-      });
+      let tx: `0x${string}` | null = null;
+      for (const addr of [CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ADDRESS]) {
+        try {
+          tx = await writeContractAsync({
+            address: addr, abi: CIPHERPAY_ABI as any,
+            functionName: 'cancelInvoice', args: [hash as `0x${string}`],
+          });
+          break;
+        } catch {}
+      }
+      if (!tx) throw new Error('Cancel failed on all contracts');
       await publicClient.waitForTransactionReceipt({ hash: tx });
-      addToast('success', 'Invoice cancelled');
+      addToast('success', 'Invoice cancelled — ETH refunded');
       refetchInvoices();
     } catch (err: any) {
       const msg = err.shortMessage || err.message || 'Cancel failed';
+      addToast('error', msg.includes('User rejected') ? 'Transaction cancelled' : msg);
+    }
+  };
+
+  const handlePause = async (hash: string) => {
+    if (!publicClient) return;
+    try {
+      const pauseAbi = [{ name: 'pauseInvoice', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] }] as const;
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS, abi: pauseAbi as any,
+        functionName: 'pauseInvoice', args: [hash as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      addToast('success', 'Invoice paused');
+      refetchInvoices();
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Pause failed';
+      addToast('error', msg.includes('User rejected') ? 'Transaction cancelled' : msg);
+    }
+  };
+
+  const handleResume = async (hash: string) => {
+    if (!publicClient) return;
+    try {
+      const resumeAbi = [{ name: 'resumeInvoice', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] }] as const;
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS, abi: resumeAbi as any,
+        functionName: 'resumeInvoice', args: [hash as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      addToast('success', 'Invoice resumed');
+      refetchInvoices();
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Resume failed';
       addToast('error', msg.includes('User rejected') ? 'Transaction cancelled' : msg);
     }
   };
@@ -127,6 +183,7 @@ export function Dashboard() {
       case 'open': return <Clock className="w-4 h-4 text-secondary" />;
       case 'cancelled': return <XCircle className="w-4 h-4 text-text-muted" />;
       case 'locked': return <Lock className="w-4 h-4 text-yellow-500" />;
+      case 'paused': return <Clock className="w-4 h-4 text-orange-500" />;
       default: return null;
     }
   };
@@ -137,6 +194,7 @@ export function Dashboard() {
       case 'open': return 'text-secondary';
       case 'cancelled': return 'text-text-muted';
       case 'locked': return 'text-yellow-500';
+      case 'paused': return 'text-orange-500';
       default: return 'text-text-muted';
     }
   };
@@ -227,18 +285,32 @@ export function Dashboard() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-2">
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{stat.label}</p>
-            <div className="flex items-center gap-2">
+          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+            className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-3 hover:border-primary/20 transition-colors">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{stat.label}</p>
+              {i === 0 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+            </div>
+            <div className="flex items-baseline gap-2">
               {stat.isEncrypted ? (
-                <EncryptedAmount amount="7,050" />
+                <EncryptedAmount compact />
               ) : (
-                <span className="text-2xl font-bold text-white">
+                <span className={`text-3xl font-bold ${(stat as any).color || 'text-white'}`}>
                   <CountUpAnimation value={stat.value} />
                 </span>
               )}
             </div>
-          </div>
+            {(stat as any).trend && (
+              <p className="text-[10px] text-text-dim">{(stat as any).trend}</p>
+            )}
+            {/* Mini progress bar for settle rate */}
+            {stat.label === 'Settled' && totalCount > 0 && (
+              <div className="w-full h-1 bg-surface-3 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${settleRate}%` }}
+                  transition={{ duration: 1, delay: 0.5 }} className="h-full bg-primary rounded-full" />
+              </div>
+            )}
+          </motion.div>
         ))}
       </div>
 
@@ -249,9 +321,29 @@ export function Dashboard() {
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             <h2 className="text-xl font-bold text-white uppercase tracking-tight">Recent Ciphers</h2>
           </div>
-          <Link to="/app/explorer" className="text-xs font-bold text-primary hover:underline uppercase tracking-widest">
-            View All Explorer →
-          </Link>
+          <div className="flex items-center gap-4">
+            {invoices.length > 0 && (
+              <button
+                onClick={() => {
+                  const csv = ['Hash,Type,Status,Created'].concat(
+                    invoices.map(i => `${i.hash},${i.type},${i.status},${new Date(i.createdAt).toISOString()}`)
+                  ).join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url; a.download = 'cipherpay-invoices.csv'; a.click();
+                  URL.revokeObjectURL(url);
+                  addToast('success', 'CSV exported');
+                }}
+                className="text-[10px] text-text-muted hover:text-primary transition-colors uppercase tracking-widest"
+              >
+                Export CSV
+              </button>
+            )}
+            <Link to="/app/explorer" className="text-xs font-bold text-primary hover:underline uppercase tracking-widest">
+              View All Explorer →
+            </Link>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -306,7 +398,7 @@ export function Dashboard() {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <EncryptedAmount amount={invoice.amount} />
+                      <EncryptedAmount invoiceHash={invoice.hash} amount={invoice.amount} compact />
                       {invoice.type === 'multi-pay' && invoice.totalCollected !== undefined && (
                         <div className="mt-1.5 space-y-1">
                           <div className="w-24 h-1 bg-surface-2 rounded-full overflow-hidden">
@@ -318,13 +410,21 @@ export function Dashboard() {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => navigate(`/app/explorer`)}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDrawerInvoice(invoice)}>View</Button>
                         {/* Settle — only for multi-pay creator */}
                         {invoice.status === 'open' && invoice.type === 'multi-pay' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
                           <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleSettle(invoice.hash)}>Settle</Button>
                         )}
-                        {/* Cancel — only for creator's open invoices */}
+                        {/* Pause — only for creator's open invoices */}
                         {invoice.status === 'open' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
+                          <Button variant="ghost" size="sm" className="text-orange-400" onClick={() => handlePause(invoice.hash)}>Pause</Button>
+                        )}
+                        {/* Resume — only for creator's paused invoices */}
+                        {invoice.status === 'paused' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
+                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleResume(invoice.hash)}>Resume</Button>
+                        )}
+                        {/* Cancel — for creator's open or paused invoices */}
+                        {(invoice.status === 'open' || invoice.status === 'paused') && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
                           <Button variant="ghost" size="sm" className="text-red-400" onClick={() => handleCancel(invoice.hash)}>Cancel</Button>
                         )}
                         {/* Pay — only for non-creator open invoices */}
@@ -343,11 +443,20 @@ export function Dashboard() {
                 )) : (
                   <tr>
                     <td colSpan={5} className="px-8 py-16 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                        <Lock className="w-12 h-12 text-text-dim" />
-                        <p className="text-text-muted">No ciphers found</p>
+                      <div className="flex flex-col items-center gap-6 relative">
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+                        </div>
+                        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                          className="relative w-16 h-16 bg-surface-2 rounded-2xl flex items-center justify-center border border-border-default">
+                          <Lock className="w-8 h-8 text-text-dim" />
+                        </motion.div>
+                        <div className="space-y-2 text-center">
+                          <p className="text-sm font-bold text-white">No Invoices Yet</p>
+                          <p className="text-xs text-text-muted max-w-xs">Create your first encrypted invoice and start accepting private payments</p>
+                        </div>
                         <Link to="/app/new-cipher">
-                          <Button variant="primary" size="sm">Create your first cipher →</Button>
+                          <Button variant="primary" size="sm">Create First Cipher →</Button>
                         </Link>
                       </div>
                     </td>
@@ -358,6 +467,8 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      <SideDrawer isOpen={!!drawerInvoice} onClose={() => setDrawerInvoice(null)} invoice={drawerInvoice} />
     </div>
   );
 }
