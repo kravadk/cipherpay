@@ -34,9 +34,7 @@ export function Navbar() {
         }`}
       >
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center rotate-45 group-hover:rotate-[135deg] transition-transform duration-500">
-            <div className="w-4 h-4 bg-black rounded-sm -rotate-45" />
-          </div>
+          <img src="/logo.png" alt="CipherPay" className="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform duration-300" />
           <span className="text-xl font-bold text-white tracking-tight">CipherPay</span>
         </Link>
 

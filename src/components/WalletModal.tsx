@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, Wallet, X, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from './Button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useConnect, useAccount, useSwitchChain } from 'wagmi';
 import { sepolia } from 'viem/chains';
 import { useState, useEffect, useRef } from 'react';
@@ -11,18 +11,23 @@ export function WalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const { isConnected, chainId } = useAccount();
   const { switchChain } = useSwitchChain();
   const navigate = useNavigate();
+  const location = useLocation();
   const [connectError, setConnectError] = useState<string | null>(null);
   const didRedirect = useRef(false);
 
   const needsSwitch = isConnected && chainId !== sepolia.id;
 
-  // Redirect when connected successfully
+  // Redirect when connected successfully — but NOT if already on /pay or /profile page
   useEffect(() => {
     if (isOpen && isConnected && !needsSwitch && !didRedirect.current) {
       didRedirect.current = true;
+      const isPublicPage = location.pathname.startsWith('/pay') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/claim') || location.pathname.startsWith('/shared');
       setTimeout(() => {
         onClose();
-        navigate('/app/dashboard');
+        if (!isPublicPage) {
+          navigate('/app/dashboard');
+        }
+        // If on public page — just close modal, stay on page
       }, 800);
     }
   }, [isConnected, needsSwitch, isOpen]);

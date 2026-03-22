@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Copy,
   LogOut,
-  Bell
+  Bell,
+  Users
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
@@ -46,6 +47,13 @@ function SidebarItem({ icon: Icon, label, path, isActive, isComingSoon, badge, b
             : 'text-text-secondary hover:text-text-primary hover:bg-surface-2'
       }`}
     >
+      {isActive && (
+        <motion.div
+          layoutId="sidebar-active"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full"
+          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+        />
+      )}
       <div className="flex items-center gap-3">
         <Icon className={`w-4 h-4 ${isActive ? 'text-black' : 'text-inherit'}`} />
         <span className="text-sm">{label}</span>
@@ -120,9 +128,7 @@ export function AppSidebar() {
     <aside className="w-64 h-screen bg-bg-base border-r border-border-default flex flex-col z-[10001]">
       <div className="p-6">
         <Link to="/" className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center rotate-45">
-            <div className="w-4 h-4 bg-black rounded-sm -rotate-45" />
-          </div>
+          <img src="/logo.png" alt="CipherPay" className="w-8 h-8 rounded-lg" />
           <span className="text-xl font-bold text-white tracking-tight">CipherPay</span>
         </Link>
         <div className="flex items-center gap-2 px-2">
@@ -138,41 +144,28 @@ export function AppSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 space-y-6 py-4">
-        <SidebarSection label="Overview">
+        <SidebarSection label="Main">
           <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/app/dashboard" isActive={location.pathname === '/app/dashboard'} />
-          <SidebarItem
-            icon={Bell}
-            label="Notifications"
-            path="/app/notifications"
-            isActive={location.pathname === '/app/notifications'}
-            badge={unreadCount > 0 ? String(unreadCount) : undefined}
-            badgeColor={unreadCount > 0 ? 'bg-primary text-black' : undefined}
-          />
-        </SidebarSection>
-
-        <SidebarSection label="Payments" badge="FEATURED">
-          <SidebarItem icon={Search} label="Explorer" path="/app/explorer" isActive={location.pathname === '/app/explorer'} />
           <SidebarItem icon={Plus} label="New Cipher" path="/app/new-cipher" isActive={location.pathname === '/app/new-cipher'} badge="NEW" badgeColor="bg-primary text-black" />
+          <SidebarItem icon={Search} label="Explorer" path="/app/explorer" isActive={location.pathname === '/app/explorer'} />
+        </SidebarSection>
+
+        <SidebarSection label="Invoices">
+          <SidebarItem icon={History} label="Payment Proofs" path="/app/proofs" isActive={location.pathname === '/app/proofs'} />
           <SidebarItem icon={Repeat} label="Recurring" path="/app/recurring" isActive={location.pathname === '/app/recurring'} />
-          <SidebarItem icon={Zap} label="Batch Cipher" path="/app/batch" isActive={location.pathname === '/app/batch'} />
+          <SidebarItem icon={Users} label="Shared Invoice" path="/app/shared" isActive={location.pathname === '/app/shared'} />
+          <SidebarItem icon={Zap} label="Batch Cipher" path="/app/batch" isComingSoon badge="W3" badgeColor="bg-surface-3 text-text-dim" />
+          <SidebarItem icon={Gift} label="Cipher Drop" path="/app/cipher-drop" isComingSoon badge="W3" badgeColor="bg-surface-3 text-text-dim" />
+          <SidebarItem icon={Shield} label="Salary Proof" path="/app/compliance/salary" isComingSoon badge="W4" badgeColor="bg-surface-3 text-text-dim" />
+          <SidebarItem icon={BookOpen} label="Audit Center" path="/app/compliance/audit" isComingSoon badge="W4" badgeColor="bg-surface-3 text-text-dim" />
         </SidebarSection>
 
-        <SidebarSection label="Distributions" badge="FLAGSHIP">
-          <SidebarItem icon={Gift} label="Cipher Drop" path="/app/cipher-drop" isActive={location.pathname === '/app/cipher-drop'} />
-          <SidebarItem icon={History} label="Payouts" path="/app/payouts" isComingSoon />
-        </SidebarSection>
-
-        <SidebarSection label="Compliance" badge="COMING SOON">
-          <SidebarItem icon={Shield} label="Salary Proof" path="/app/compliance/salary" isComingSoon />
-          <SidebarItem icon={BookOpen} label="Audit Center" path="/app/compliance/audit" isComingSoon />
-        </SidebarSection>
-
-        <SidebarSection label="Identity">
+        <SidebarSection label="Account">
           <SidebarItem icon={User} label="My Identity" path="/app/identity" isActive={location.pathname === '/app/identity'} />
           <SidebarItem icon={Settings} label="Settings" path="/app/settings" isActive={location.pathname === '/app/settings'} />
         </SidebarSection>
 
-        <SidebarSection label="Developers">
+        <SidebarSection label="More">
           <SidebarItem icon={Code} label="Build" path="/app/build" isActive={location.pathname === '/app/build'} />
           <SidebarItem icon={BookOpen} label="Guide" path="/app/guide" isActive={location.pathname === '/app/guide'} />
         </SidebarSection>
