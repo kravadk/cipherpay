@@ -1,161 +1,361 @@
-# CipherPay
+<div align="center">
 
-**Privacy-first invoice & payment protocol powered by Fhenix FHE on Ethereum Sepolia**
+# ◆ CipherPay
 
-CipherPay enables encrypted invoicing where amounts are hidden on-chain using Fully Homomorphic Encryption. Only authorized parties can decrypt — no one else sees the numbers, not even validators.
+**Privacy-first invoice & payment protocol powered by Fhenix FHE**
 
-## How Fhenix FHE is Used
+[![Ethereum Sepolia](https://img.shields.io/badge/Network-Ethereum_Sepolia-blue)](https://sepolia.etherscan.io)
+[![CoFHE SDK](https://img.shields.io/badge/CoFHE_SDK-0.4.0-green)](https://www.npmjs.com/package/@cofhe/sdk)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-CipherPay is built on the **Fhenix CoFHE coprocessor** — FHE-as-a-Service for EVM chains. The contract lives on Ethereum Sepolia, but all encryption operations are handled by Fhenix infrastructure.
+Encrypted invoicing where amounts are hidden on-chain using Fully Homomorphic Encryption.
+Only authorized parties can decrypt — no one else sees the numbers, not even validators.
 
-### Solidity — Encrypted Types & Operations
+[Live App](https://cipherpayy.vercel.app) · [Etherscan](https://sepolia.etherscan.io/address/0xB86C10A9FeeD61d525A94B5E6a12409a697ac592) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
 
-```solidity
-import {FHE, euint64, InEuint64} from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+</div>
 
-// Store encrypted amount on-chain
-euint64 amount = FHE.asEuint64(_encryptedInput);
+---
 
-// Encrypted arithmetic (multi-pay: add payments without revealing)
-euint64 total = FHE.add(collected, payment);
+## Problem
 
-// Access control — who can decrypt
-FHE.allowThis(amount);          // Contract can reuse ciphertext
-FHE.allowSender(amount);        // Creator can decrypt
-FHE.allow(amount, recipient);   // Recipient can decrypt
+On-chain payments today are **fully transparent**. Every transaction on Ethereum exposes:
+
+- **Exact amounts** — salary, contractor rates, business deals visible to anyone on Etherscan
+- **Payment patterns** — competitors track vendor relationships, pricing strategies, cash flow
+- **MEV vulnerability** — bots front-run visible pending transactions for profit
+- **All-or-nothing privacy** — either everything is public or nothing is verifiable for compliance
+
+Businesses, freelancers, and DAOs need payment privacy but can't sacrifice on-chain verifiability. Current solutions force a choice between transparency and confidentiality.
+
+## Who It's For
+
+- **Freelancers & contractors** — invoice clients without exposing rates publicly
+- **Businesses** — pay vendors and employees without revealing financial strategy
+- **DAOs** — distribute funds privately while maintaining governance accountability
+- **Anyone** sending payments who doesn't want the world to see the amount
+
+## Solution
+
+CipherPay encrypts invoice amounts on-chain using **Fhenix Fully Homomorphic Encryption (FHE)**. The protocol stores amounts as `euint64` ciphertext — not plaintext numbers. The CoFHE coprocessor performs arithmetic on encrypted data (adding payments, checking thresholds) without ever decrypting. Only authorized parties can reveal amounts via EIP-712 wallet permits.
+
+**What makes this different from ZK:**
+- ZK proves a statement is true without revealing data — but the data must exist somewhere in plaintext during computation
+- FHE encrypts data AND computes on it while encrypted — plaintext never exists on-chain, not even during computation
+- The contract adds encrypted payments via `FHE.add()` — the total is computed without any party seeing individual amounts
+
+## How It Works — Fhenix FHE Integration
+
+### Architecture
+
+```
+User (Browser)                 Ethereum Sepolia              CoFHE (Fhenix)
+┌─────────────┐                ┌──────────────┐              ┌──────────────┐
+│ @cofhe/sdk  │──encrypt──────>│ CipherPayFHE │──FHE ops────>│ FHEOS Server │
+│ TFHE + ZK   │                │ euint64      │<─results─────│ (off-chain)  │
+│ Web Worker  │                │ FHE.add()    │              └──────────────┘
+└──────┬──────┘                │ FHE.allow()  │              ┌──────────────┐
+       │                       └──────────────┘              │  Threshold   │
+       │──permit (EIP-712)──────────────────────────────────>│  Network     │
+       │<─decrypted value────────────────────────────────────│ (decrypt)    │
+       │                                                     └──────────────┘
 ```
 
-The contract `CipherPayFHE.sol` uses `euint64` for all amounts. Values stored on-chain are ciphertext handles — not plaintext numbers. Even Etherscan shows only the handle, not the amount.
+1. **Client encrypts** — `@cofhe/sdk` encrypts amount in browser using TFHE + ZK proof (Web Worker, ~9 seconds)
+2. **Contract stores** — `FHE.asEuint64(encryptedInput)` converts to on-chain ciphertext handle
+3. **CoFHE computes** — `FHE.add(collected, payment)` adds encrypted payments off-chain, returns result on-chain
+4. **ACL controls** — `FHE.allowSender()` + `FHE.allow(recipient)` define who can decrypt
+5. **Threshold decrypts** — Authorized user signs EIP-712 permit → CoFHE Threshold Network decrypts → plaintext returned only to that user
 
-### Client SDK — Encryption & ZK Proofs
+### Smart Contract — Encrypted Types
+
+```solidity
+import {FHE, euint64, euint32, euint8, euint128, eaddress, InEuint64, InEaddress, ebool}
+  from "@fhenixprotocol/cofhe-contracts/FHE.sol";
+
+// Store encrypted amount — Etherscan shows only handle, not value
+euint64 amount = FHE.asEuint64(_encryptedInput);
+
+// Encrypted recipient — address hidden on Etherscan
+eaddress recipient = FHE.asEaddress(_encryptedRecipient);
+
+// Arithmetic on encrypted data
+euint64 remaining = FHE.sub(amount, totalCollected);     // subtraction
+euint64 capped = FHE.min(remaining, payment);            // cap payment
+euint64 total = FHE.add(collected, capped);              // addition
+euint64 tax = FHE.div(FHE.mul(amount, rate), 10000);     // tax calculation
+
+// Comparisons — returns ebool (encrypted boolean)
+ebool isPaid = FHE.gte(collected, amount);       // >= check
+ebool isPartial = FHE.ne(collected, amount);     // != check
+ebool notPaid = FHE.not(isPaid);                 // negation
+ebool isAuth = FHE.eq(recipient, FHE.asEaddress(msg.sender)); // address match
+
+// Conditional logic on encrypted data
+euint64 result = FHE.select(condition, valueA, valueB); // ternary
+
+// Access control
+FHE.allowSender(amount);          // Creator can decrypt
+FHE.allowTransient(amount, addr); // Temporary access (current tx only)
+FHE.allowGlobal(platformVolume);  // Public aggregate stat
+
+// Async on-chain decrypt (two-phase)
+FHE.decrypt(isPaid);              // Request decryption
+FHE.getDecryptResultSafe(isPaid); // Poll result
+
+// Random encrypted value
+euint64 nonce = FHE.randomEuint64(); // Unpredictable on-chain
+```
+
+### Client SDK — 5-Stage Encryption Pipeline
 
 ```typescript
-import { Encryptable } from '@cofhe/sdk';
-
-// Encrypt amount in browser (TFHE + ZK Proof of Knowledge)
 const [encryptedAmount] = await cofheClient
   .encryptInputs([Encryptable.uint64(parseEther('0.1'))])
-  .onStep((step, ctx) => {
-    if (ctx?.isEnd) console.log(`✓ ${step}`);
-  })
+  .onStep((step) => console.log(step))   // initTfhe → fetchKeys → pack → prove → verify
   .execute();
 
 // Send encrypted InEuint64 tuple to contract
 await contract.createInvoice(encryptedAmount, recipient, type, ...);
 ```
 
-Encryption happens client-side in 5 steps: InitTfhe → FetchKeys → Pack → Prove → Verify. The ZK proof runs in a Web Worker to avoid blocking UI.
+| Stage | Time | What happens |
+|-------|------|-------------|
+| initTfhe | ~580ms | Load TFHE WebAssembly module |
+| fetchKeys | ~2200ms | Get FHE public key from CoFHE server |
+| pack | ~1ms | Pack value into compact ciphertext |
+| prove | ~5100ms | Generate ZK proof (Web Worker) |
+| verify | ~1300ms | On-chain ZK verification |
 
-### Permits — Decryption Authorization
+### Permit-Based Decryption
 
 ```typescript
-// Sign EIP-712 permit (MetaMask popup)
+// Sign EIP-712 permit in MetaMask
 await cofheClient.permits.getOrCreateSelfPermit();
 
 // Get ciphertext handle from contract
 const ctHash = await contract.getEncryptedAmount(invoiceHash);
 
-// Decrypt via CoFHE Threshold Network
-const amount = await cofheClient
-  .decryptForView(ctHash, FheTypes.Uint64)
-  .execute();
+// Decrypt via CoFHE Threshold Network — only works for authorized addresses
+const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute();
 ```
 
-Decryption requires both an on-chain ACL check (`FHE.allowSender`) and a valid EIP-712 permit. The Threshold Network ensures no single party holds the full decryption key.
+### What's Visible vs Hidden
 
-### What's Encrypted vs Public
+| Data | Etherscan (public) | With Permit (private) |
+|------|-------------------|----------------------|
+| Invoice amount | Ciphertext handle only | Decrypted value |
+| Payment amount | Ciphertext handle only | Decrypted value |
+| Multi-pay total | Computed via FHE.add() — encrypted | Decrypted total |
+| Invoice hash | ✓ Visible | ✓ Visible |
+| Type & status | ✓ Visible | ✓ Visible |
+| Creator address | ✓ Visible | ✓ Visible |
+| Block & timestamp | ✓ Visible | ✓ Visible |
+| Payer count | ✓ Visible | ✓ Visible |
 
-| Data | Visibility |
-|------|-----------|
-| Invoice amount | Encrypted (`euint64`) — permit required |
-| Payment amounts | Encrypted (`euint64`) — permit required |
-| Collected total (multi-pay) | Encrypted — computed via `FHE.add()` |
-| Invoice hash, type, status | Public |
-| Creator & recipient addresses | Public |
-| Block number, timestamp | Public |
-| Payer count | Public |
-| Memo | Public (on-chain string) |
+---
 
-## Architecture
+## Key Features
 
-```
-Browser                          Ethereum Sepolia              CoFHE (Fhenix)
-┌─────────────┐                  ┌──────────────┐              ┌──────────────┐
-│ @cofhe/sdk  │──encrypt────────>│ CipherPayFHE │──FHE ops────>│ FHEOS Server │
-│ TFHE + ZK   │                  │ euint64      │<─results─────│ (off-chain)  │
-│ Web Worker  │                  │ FHE.add()    │              └──────────────┘
-└──────┬──────┘                  │ FHE.allow()  │              ┌──────────────┐
-       │                         └──────────────┘              │  Threshold   │
-       │──permit (EIP-712)──────────────────────────────────>  │  Network     │
-       │<─decrypted value────────────────────────────────────  │ (decrypt)    │
-       │                                                       └──────────────┘
-```
+### Invoice Types
 
-## Deployed Contracts
+| Type | How It Works |
+|------|-------------|
+| **Standard** | Single payer → auto-settles → ETH transferred to creator |
+| **Multi Pay** | Multiple payers contribute → progress via `FHE.add()` → creator settles → ETH transferred |
+| **Recurring** | Configurable frequency (daily / N days / weekly / bi-weekly / monthly) |
+| **Vesting** | Creator deposits ETH as escrow → locked until block height → recipient claims |
 
-| Contract | Address | Role |
-|----------|---------|------|
-| CipherPayFHE | `0x39655b5171577e91AFB57d86a48c6D39D51f20eb` | Primary — FHE encrypted amounts |
-| CipherPaySimple | `0xa84607842BBb8b9871E3A64FD9a5AFEb8d2C9aBE` | Fallback — plaintext amounts |
+### Payment Flow
 
-Network: Ethereum Sepolia (Chain ID: 11155111)
+1. Creator creates invoice → amount encrypted via CoFHE SDK → stored as `euint64` on FHE contract
+2. Creator shares payment link (includes amount parameter for payer convenience)
+3. Payer opens link → encrypts payment client-side → submits to contract
+4. Contract executes `FHE.add(collected, payment)` on ciphertext
+5. Standard: auto-settles when paid → ETH goes to creator
+6. Multi Pay: creator manually settles → all ETH goes to creator
+7. Cancel: all payers get automatic refund
 
-## Features
+### Additional Features
 
-**Invoice Types:**
-- **Standard** — single payer, auto-settle on payment
-- **Multi Pay** — multiple payers contribute, creator settles manually. Amounts added via `FHE.add()` on-chain
-- **Recurring** — configurable frequency (daily/custom/weekly/bi-weekly/monthly)
-- **Vesting** — locked until specific block height, enforced in contract
+- **Pause/Resume** — creator can temporarily block payments on open invoices
+- **Vesting Escrow** — creator deposits ETH at creation, recipient claims after unlock block
+- **Cancel with Refund** — automatically refunds all payers on cancellation
+- **Reveal (decrypt)** — click eye icon → sign EIP-712 permit → see decrypted amount
+- **Real ETH Transfers** — payments move real ETH via payable contract functions
 
-**App Pages:**
-- Dashboard — real-time balance + invoice list from blockchain
-- Explorer — search by hash, filter by type/status
-- New Cipher — create invoices with FHE encryption flow
-- Pay — encrypted payments with ZK proof generation
-- Recurring — manage schedules, pause/resume/cancel
-- Batch — CSV upload, multi-recipient payments
-- Identity — CipherCard, QR code, downloadable card
-- Notifications — on-chain events (InvoicePaid, InvoiceSettled, InvoiceCancelled)
-- Settings — FHE permit management, preferences
-- Build — contract functions reference, code examples
-- Guide — 20+ documentation sections
+---
 
-**Data:**
-- 100% on-chain — no localStorage, no backend, no cache
-- All invoice data fetched from Sepolia via `readContract`
-- Notifications parsed from blockchain event logs
+## Expected User Experience
+
+### Creator Flow
+1. Connect wallet → Dashboard shows balance and invoices from blockchain
+2. Create invoice → select type, enter amount, optional recipient
+3. Watch FHE encryption in real-time (deploy logs show each stage)
+4. Get payment link with invoice hash → share with payer
+5. Dashboard updates when payment arrives (on-chain events)
+6. Click Reveal to see decrypted amount (permit signature required)
+
+### Payer Flow
+1. Open payment link → see invoice details (type, status, creator)
+2. Amount pre-filled from URL (or enter manually for FHE-encrypted invoices)
+3. Click "Pay" → MetaMask confirms ETH transfer
+4. Payment recorded on-chain → creator notified via events
+
+### Verifier/Auditor Flow (Wave 4)
+1. Receive audit package from invoice creator
+2. Import permit → decrypt only scoped fields (amount, or amount + recipient)
+3. Verify on-chain without seeing unscoped data
+
+---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS 4 + Framer Motion |
-| Wallet | Wagmi v2 + Viem |
-| FHE SDK | @cofhe/sdk 0.4.0 |
-| Contracts | @fhenixprotocol/cofhe-contracts 0.1.0 |
-| Solidity | 0.8.25, evmVersion: cancun |
-| Hardhat | @cofhe/hardhat-plugin 0.4.0 |
-| Network | Ethereum Sepolia |
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| FHE Coprocessor | Fhenix CoFHE | Encrypted computation on EVM without custom chain |
+| Client SDK | @cofhe/sdk 0.4.0 | Client-side TFHE encryption + ZK proofs |
+| Contracts | @fhenixprotocol/cofhe-contracts 0.1.0 | Solidity FHE library (euint64, FHE.add, FHE.allow) |
+| Solidity | 0.8.25 (evmVersion: cancun) | Smart contract language |
+| Hardhat | @cofhe/hardhat-plugin 0.4.0 | Contract compilation + deployment |
+| Frontend | React 18 + TypeScript + Vite | App interface |
+| Wallet | Wagmi v2 + Viem | Wallet connection + contract interaction |
+| Styling | Tailwind CSS 4 + Framer Motion | UI + animations |
+| Network | Ethereum Sepolia (11155111) | Testnet deployment |
+| Data | 100% on-chain | No backend, no localStorage, no cache |
 
-## Run Locally
+---
+
+## Live Deployment
+
+| Contract | Address | Role |
+|----------|---------|------|
+| CipherPayFHE | [`0xB86C...c592`](https://sepolia.etherscan.io/address/0xB86C10A9FeeD61d525A94B5E6a12409a697ac592) | Primary — FHE encrypted amounts + eaddress + tax + analytics |
+| CipherPaySimple | [`0x2899...9419`](https://sepolia.etherscan.io/address/0x28994f265d07189dE3098eda3DB7dd16E15c9419) | Fallback — real ETH transfers, vesting escrow |
+| PaymentProof | [`0x54C2...7293`](https://sepolia.etherscan.io/address/0x54C22cdF7B65E64C75EeEF565E775503C7657293) | On-chain payment receipts with encrypted amounts |
+| SharedInvoice | [`0xd12e...B746`](https://sepolia.etherscan.io/address/0xd12eAcAD8FD0cd82894d819f4fb5e4E9168eB746) | Split bills with encrypted individual shares |
+| InvoiceMetrics | [`0x02ae...25eF`](https://sepolia.etherscan.io/address/0x02ae50D014Ed6E627Aacd92A7E8C057F662b25eF) | Encrypted per-user payment analytics |
+
+**App:** [cipherpayy.vercel.app](https://cipherpayy.vercel.app)
+
+### What's Working (Wave 1)
+
+- ✅ FHE encryption end-to-end — full 5-stage pipeline (~9 seconds)
+- ✅ Ciphertext on Etherscan — amounts invisible, only handles visible
+- ✅ Permit-based Reveal — EIP-712 → decryptForView
+- ✅ Real ETH transfers — auto-settle, cancel with refund
+- ✅ Vesting escrow — creator deposits, recipient claims after unlock
+- ✅ Multi-pay with FHE.add() — encrypted aggregation
+- ✅ Pause/Resume invoice lifecycle
+- ✅ 12 app pages — all data from blockchain, zero local storage
+- ✅ Vercel deployment with WASM support (COOP/COEP headers)
+
+### Etherscan Proof
+
+**Standard transaction (no privacy):**
+```
+Value: 0.01 ETH                    ← amount visible to everyone
+Input: amount=10000000000000000    ← plaintext in calldata
+```
+
+**CipherPay FHE transaction:**
+```
+Value: 0 ETH                      ← no ETH in value field
+Input: ctHash=32773097825...       ← ciphertext handle, meaningless without permit
+```
+
+---
+
+## Roadmap
+
+### Wave 1 ✅ (Current)
+
+**Smart Contracts (6 deployed on Sepolia):**
+- [x] CipherPayFHE — primary FHE contract with 18+ encrypted operations (euint64, euint32, euint8, euint128, eaddress, ebool)
+- [x] CipherPaySimple — real ETH transfers, vesting escrow, pause/resume, cancel with refund
+- [x] PaymentProof — on-chain payment receipts with encrypted amounts
+- [x] SharedInvoice — split bills with encrypted individual shares
+- [x] InvoiceMetrics — encrypted per-user payment analytics (volume, count)
+
+**FHE Operations Used:**
+- [x] `FHE.asEuint64`, `FHE.asEaddress` — encrypt amounts and addresses
+- [x] `FHE.add`, `FHE.sub`, `FHE.mul`, `FHE.div` — encrypted arithmetic
+- [x] `FHE.min`, `FHE.max` — cap payments, enforce limits
+- [x] `FHE.gt`, `FHE.gte`, `FHE.eq`, `FHE.ne`, `FHE.not` — encrypted comparisons
+- [x] `FHE.select` — conditional logic on encrypted data
+- [x] `FHE.allowSender`, `FHE.allow`, `FHE.allowTransient`, `FHE.allowGlobal` — access control
+- [x] `FHE.decrypt` + `FHE.getDecryptResultSafe` — async on-chain decryption
+- [x] `FHE.randomEuint64` — unpredictable encrypted nonce
+- [x] `eaddress` — encrypted recipient (hidden on Etherscan)
+
+**Client SDK:**
+- [x] Full 5-stage encryption pipeline: initTfhe → fetchKeys → pack → prove → verify (~9 sec)
+- [x] Permit-based Reveal — EIP-712 → decryptForView via Threshold Network
+- [x] Invoice Breakdown — encrypted line items per invoice
+
+**Features:**
+- [x] Standard, Multi Pay, Recurring invoice types with real ETH transfers
+- [x] Vesting escrow — creator deposits ETH, recipient claims after unlock block
+- [x] Pause/Resume/Cancel with automatic refund to all payers
+- [x] Encrypted tax calculation (FHE.mul + FHE.div on basis points)
+- [x] Platform-wide encrypted aggregates (volume, invoice count) via FHE.allowGlobal
+- [x] Payment stepper UI (Encrypting → Submitting → Confirming)
+- [x] On-chain commitments display (ciphertext handle + Etherscan link)
+- [x] E2E test suite — 31 tests with 2 wallets, all passing
+
+**App:**
+- [x] 14 pages — Dashboard, Explorer, NewCipher, Pay, Recurring, SharedInvoice, PaymentProofs, Identity, Settings, Build, Guide, Profile, Claim
+- [x] 100% on-chain data — no localStorage, no backend, no cache
+- [x] Vercel deployment with WASM support (COOP/COEP headers)
+
+### Wave 2 (Planned)
+- [ ] Full FHE decryption for all amounts — remove Simple contract fallback
+- [ ] The Graph subgraph for InvoiceCreated, InvoicePaid, InvoiceSettled events
+- [ ] Encrypted threshold milestones — FHE.gte for multi-pay 25/50/75/100% without revealing amounts
+- [ ] Dual receipt system — payer and creator both get on-chain proof
+- [ ] Encryption progress feedback in UI
+
+### Wave 3 (Planned)
+- [ ] Recurring automation via Chainlink Automation
+- [ ] Batch single-tx payments — createBatchInvoice() for N recipients
+- [ ] CipherDrop — Merkle airdrop with nullifier-based claims
+- [ ] FHERC20 private token balances on Dashboard
+- [ ] ReinieraOS integration — cross-chain USDC via Circle CCTP
+- [ ] Donation invoice type — open-ended amount
+
+### Wave 4 (Planned)
+- [ ] Audit packages — createSharing() permits with scoped disclosure
+- [ ] Salary Proof — prove "income >= X" via FHE.gte → ebool without revealing amount
+- [ ] Audit Center — manage audit reports, time-limited view keys
+- [ ] Backend for persistent preferences and real-time notifications
+- [ ] Claim page — Merkle proof verification, eligibility check
+- [ ] Conditional escrow settlement via ReinieraOS
+
+### Wave 5 (Planned)
+- [ ] Multi-chain — deploy on Arbitrum Sepolia + Base Sepolia
+- [ ] Cross-chain invoice payments via ReinieraOS CCTP
+- [ ] Chain selector in UI
+- [ ] Mobile responsive all pages
+- [ ] Security audit — reentrancy, gas optimization, access control
+- [ ] Merchant SDK (@cipherpay/sdk) with Stripe-like API
+- [ ] Video demo, architecture diagram, deployment guide
+
+---
+
+## Getting Started
 
 ```bash
-# Install dependencies
+git clone https://github.com/kravadk/cipherpay.git
+cd cipherpay
 npm install
 
-# Set up environment
 cp .env.example .env
-# Add your private key to .env (for contract deployment only)
-
-# Start development server
 npx vite --port 3005
 
 # Compile contracts
 TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat compile --config hardhat.config.cts
 
-# Deploy FHE contract to Sepolia
+# Deploy FHE contract
 TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/deploy-fhe.cts --network eth-sepolia --config hardhat.config.cts
 ```
 
@@ -163,44 +363,39 @@ TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/deploy-fhe.cts --n
 
 ```
 contracts/
-├── CipherPayFHE.sol          # Primary contract with FHE (euint64, FHE.add, FHE.allow)
-├── CipherPaySimple.sol        # Fallback contract (plaintext uint256)
-└── CipherPay.sol              # Original FHE attempt (v1)
+├── CipherPayFHE.sol           # Primary — euint64, FHE.add, FHE.allow
+├── CipherPaySimple.sol        # Fallback — real ETH transfers, vesting escrow
+└── CipherPay.sol              # Original FHE v1
 
 src/
-├── components/                # UI components (CipherCard, DatePicker, NetworkStrip, etc.)
 ├── config/
-│   ├── contract.ts            # ABI + addresses (FHE InEuint64 tuples)
-│   ├── fhenix.ts              # Fhenix explorer URL, chain config
-│   └── wagmi.ts               # Wagmi + Sepolia config
+│   ├── contract.ts            # ABI + addresses (InEuint64 tuples)
+│   └── wagmi.ts               # Wagmi + Sepolia RPC
 ├── hooks/
-│   ├── useCofhe.ts            # CoFHE SDK init, encrypt, decrypt, permits
+│   ├── useCofhe.ts            # CoFHE SDK — encrypt, decrypt, permits
 │   ├── useInvoices.ts         # Read invoices from blockchain
 │   └── useNotifications.ts    # Parse on-chain events
-├── pages/
-│   ├── app/                   # Dashboard, Explorer, NewCipher, Settings, etc.
-│   ├── Pay.tsx                # Public pay page with FHE encryption
-│   └── Profile.tsx            # Public profile via QR code
-└── store/                     # Zustand — UI state only (no invoice data)
-
-scripts/
-├── deploy-fhe.cts             # Deploy CipherPayFHE to Sepolia
-└── deploy-simple.cts          # Deploy CipherPaySimple to Sepolia
+├── pages/                     # Dashboard, Explorer, NewCipher, Pay, Settings, etc.
+└── store/                     # Zustand — ephemeral UI state only (no data persistence)
 ```
-
-## Hackathon
-
-Built for **Privacy-by-Design dApp Buildathon** by Fhenix.
-
-- Wave 1: Core protocol + FHE integration + working MVP
-- Wave 2: Full FHE decryption, The Graph subgraph
-- Wave 3: Recurring automation, Batch tx, CipherDrop, FHERC20
-- Wave 4: Audit packages, backend, claim page
-- Wave 5: Multi-chain, mobile, security audit
 
 ## Links
 
 - [Fhenix](https://fhenix.io)
-- [CoFHE Docs](https://cofhe-docs.fhenix.zone)
+- [CoFHE Documentation](https://cofhe-docs.fhenix.zone)
 - [CoFHE SDK](https://www.npmjs.com/package/@cofhe/sdk)
 - [Buildathon Telegram](https://t.me/+rA9gI3AsW8c3YzIx)
+
+---
+
+## License
+
+MIT
+
+---
+
+<div align="center">
+
+Built with Fhenix FHE for the Privacy-by-Design dApp Buildathon
+
+</div>
