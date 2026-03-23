@@ -130,13 +130,13 @@ export function Manifesto() {
             {
               phase: 'Wave 3',
               title: 'Automation + Distribution',
-              items: ['Recurring automation via Chainlink', 'Batch single-tx payments', 'CipherDrop (Merkle airdrop)', 'ReinieraOS cross-chain USDC'],
+              items: ['Recurring automation via Chainlink', 'Batch single-tx payments', 'CipherDrop (Merkle airdrop)', 'Subscription management UI'],
               active: false
             },
             {
               phase: 'Wave 4-5',
               title: 'Compliance + Production',
-              items: ['Audit packages with scoped disclosure', 'Salary Proof (FHE.gte)', 'Multi-chain deployment', 'Merchant SDK'],
+              items: ['Salary Proof (FHE range proof)', 'Audit packages with scoped disclosure', 'Platform fee module (encrypted)', 'Merchant SDK + hosted pages'],
               active: false
             }
           ].map((step, i) => (

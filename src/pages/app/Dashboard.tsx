@@ -81,8 +81,7 @@ export function Dashboard() {
   };
 
   const handleRevealPrivate = async () => {
-    // Private balance requires FHERC20 token contract — not available yet
-    addToast('info', 'Private balance requires FHERC20 token (coming in Wave 3)');
+    addToast('info', 'Encrypted balance tracking coming soon');
   };
 
   const handleCopyHash = (hash: string) => {

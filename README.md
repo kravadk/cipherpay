@@ -315,37 +315,39 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 - [x] 100% on-chain data — no localStorage, no backend, no cache
 - [x] Vercel deployment with WASM support (COOP/COEP headers)
 
-### Wave 2 (Planned)
-- [ ] Full FHE decryption for all amounts — remove Simple contract fallback
+### Wave 2 — Indexing & Receipts
 - [ ] The Graph subgraph for InvoiceCreated, InvoicePaid, InvoiceSettled events
 - [ ] Encrypted threshold milestones — FHE.gte for multi-pay 25/50/75/100% without revealing amounts
 - [ ] Dual receipt system — payer and creator both get on-chain proof
-- [ ] Encryption progress feedback in UI
+- [ ] Donation invoice type — open-ended amount, no target
+- [ ] Full FHE decryption for all flows — remove Simple contract fallback
 
-### Wave 3 (Planned)
-- [ ] Recurring automation via Chainlink Automation
-- [ ] Batch single-tx payments — createBatchInvoice() for N recipients
-- [ ] CipherDrop — Merkle airdrop with nullifier-based claims
-- [ ] FHERC20 private token balances on Dashboard
-- [ ] ReinieraOS integration — cross-chain USDC via Circle CCTP
-- [ ] Donation invoice type — open-ended amount
+### Wave 3 — Automation & Scale
+- [ ] Recurring automation via Chainlink Automation (Keeper triggers payInvoice on schedule)
+- [ ] Batch single-tx payments — createBatchInvoice() for N recipients in one transaction
+- [ ] CipherDrop — Merkle airdrop with nullifier-based claims and encrypted amounts
+- [ ] Encrypted balance tracking per user (volume, count, avg) via InvoiceMetrics
+- [ ] Subscription management UI for CipherSubscription contract
 
-### Wave 4 (Planned)
-- [ ] Audit packages — createSharing() permits with scoped disclosure
+### Wave 4 — Compliance & Disclosure
 - [ ] Salary Proof — prove "income >= X" via FHE.gte → ebool without revealing amount
-- [ ] Audit Center — manage audit reports, time-limited view keys
-- [ ] Backend for persistent preferences and real-time notifications
-- [ ] Claim page — Merkle proof verification, eligibility check
-- [ ] Conditional escrow settlement via ReinieraOS
+- [ ] Audit packages — createSharing() permits with scoped, time-limited disclosure
+- [ ] Audit Center — manage audit reports, export encrypted proofs for accountants
+- [ ] Backend API for persistent preferences and webhook notifications
 
-### Wave 5 (Planned)
-- [ ] Multi-chain — deploy on Arbitrum Sepolia + Base Sepolia
-- [ ] Cross-chain invoice payments via ReinieraOS CCTP
-- [ ] Chain selector in UI
-- [ ] Mobile responsive all pages
+### Wave 5 — Platform & Monetization
+- [ ] Platform fee module — configurable % per invoice (encrypted via FHE, collected automatically)
+- [ ] Merchant SDK (@cipherpay/sdk) — npm package with Stripe-like API for integrations
+- [ ] Hosted invoice pages — merchants embed payment link, CipherPay handles encryption
+- [ ] Multi-chain deployment (pending CoFHE L2 support)
+- [ ] Mobile responsive polish for all pages
 - [ ] Security audit — reentrancy, gas optimization, access control
-- [ ] Merchant SDK (@cipherpay/sdk) with Stripe-like API
-- [ ] Video demo, architecture diagram, deployment guide
+
+### Revenue Model
+- **Platform fee** — small % on each settled invoice (e.g. 0.3%), encrypted via FHE so individual fees are private, only aggregate platform revenue is visible via FHE.allowGlobal
+- **Merchant API** — paid tier for high-volume users (batch invoicing, webhooks, custom branding)
+- **Hosted pages** — SaaS model where merchants get a branded payment page without running their own frontend
+- **Premium features** — audit packages, advanced analytics, priority settlement
 
 ---
 
