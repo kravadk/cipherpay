@@ -20,7 +20,7 @@ export function InvoiceCard({ invoice, onClick, className }: { invoice: Invoice;
       
       <div className="flex justify-between items-start mb-6">
         <div className="space-y-1">
-          <p className="text-[10px] text-text-muted uppercase tracking-widest">Invoice Hash</p>
+          <p className="text-xs text-text-muted uppercase tracking-widest">Invoice Hash</p>
           <p className="text-sm font-mono text-text-secondary group-hover:text-white transition-colors">
             {invoice.hash.slice(0, 12)}...
           </p>
@@ -52,7 +52,7 @@ export function InvoiceCard({ invoice, onClick, className }: { invoice: Invoice;
       <div className="flex items-center justify-between pt-4 border-t border-border-default">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] text-text-muted uppercase tracking-widest">Verified on Fhenix</span>
+          <span className="text-xs text-text-muted uppercase tracking-widest">Verified on Fhenix</span>
         </div>
         <button className="p-2 rounded-lg hover:bg-surface-2 text-text-secondary hover:text-white transition-colors">
           <ExternalLink className="w-4 h-4" />

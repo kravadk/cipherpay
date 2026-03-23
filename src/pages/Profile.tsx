@@ -83,7 +83,7 @@ export function Profile() {
       </div>
 
       <div className="px-8 py-6 text-center">
-        <p className="text-[10px] text-text-muted uppercase tracking-widest">CipherPay — Privacy by default on Ethereum Sepolia</p>
+        <p className="text-xs text-text-muted uppercase tracking-widest">CipherPay — Privacy by default on Ethereum Sepolia</p>
       </div>
     </div>
   );

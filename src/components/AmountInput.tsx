@@ -103,13 +103,13 @@ export function AmountInput({ value, onChange, label = 'Amount', placeholder = '
               <>≈ <span className="text-primary font-medium">{value}</span> ETH</>
             )}
           </p>
-          <p className="text-[10px] text-text-dim">
+          <p className="text-xs text-text-dim">
             1 ETH = ${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             {loading && ' ↻'}
           </p>
         </div>
       ) : !loading && price ? (
-        <p className="text-[10px] text-text-dim px-1">
+        <p className="text-xs text-text-dim px-1">
           1 ETH ≈ ${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}
         </p>
       ) : null}

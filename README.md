@@ -11,7 +11,7 @@
 Encrypted invoicing where amounts are hidden on-chain using Fully Homomorphic Encryption.
 Only authorized parties can decrypt — no one else sees the numbers, not even validators.
 
-[Live App](https://cipherpayy.vercel.app) · [Etherscan](https://sepolia.etherscan.io/address/0xB86C10A9FeeD61d525A94B5E6a12409a697ac592) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
+[Live App](https://cipherpayy.vercel.app) · [Etherscan](https://sepolia.etherscan.io/address/0x11B9d10bc7Cf5970dE860D8d52674329b7A791C4) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
 
 </div>
 
@@ -230,11 +230,12 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 
 | Contract | Address | Role |
 |----------|---------|------|
-| CipherPayFHE | [`0xB86C...c592`](https://sepolia.etherscan.io/address/0xB86C10A9FeeD61d525A94B5E6a12409a697ac592) | Primary — FHE encrypted amounts + eaddress + tax + analytics |
-| CipherPaySimple | [`0x2899...9419`](https://sepolia.etherscan.io/address/0x28994f265d07189dE3098eda3DB7dd16E15c9419) | Fallback — real ETH transfers, vesting escrow |
+| CipherPayFHE | [`0x11B9...91C4`](https://sepolia.etherscan.io/address/0x11B9d10bc7Cf5970dE860D8d52674329b7A791C4) | Primary — FHE encrypted amounts + eaddress + tax + analytics |
+| CipherPaySimple | [`0xF3A1...713F`](https://sepolia.etherscan.io/address/0xF3A15EC0FAE753D6BEC3AAB3aEB2d72824c0713F) | Fallback — real ETH transfers, vesting escrow |
 | PaymentProof | [`0x54C2...7293`](https://sepolia.etherscan.io/address/0x54C22cdF7B65E64C75EeEF565E775503C7657293) | On-chain payment receipts with encrypted amounts |
 | SharedInvoice | [`0xd12e...B746`](https://sepolia.etherscan.io/address/0xd12eAcAD8FD0cd82894d819f4fb5e4E9168eB746) | Split bills with encrypted individual shares |
 | InvoiceMetrics | [`0x02ae...25eF`](https://sepolia.etherscan.io/address/0x02ae50D014Ed6E627Aacd92A7E8C057F662b25eF) | Encrypted per-user payment analytics |
+| CipherSubscription | [`0xd817...937f`](https://sepolia.etherscan.io/address/0xd8176dB76f75856E687FCc756f07966B568f937f) | FHE-encrypted subscription tiers |
 
 **App:** [cipherpayy.vercel.app](https://cipherpayy.vercel.app)
 
@@ -256,13 +257,18 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 ```
 Value: 0.01 ETH                    ← amount visible to everyone
 Input: amount=10000000000000000    ← plaintext in calldata
+Storage: balance[addr] = 10000... ← readable by anyone
 ```
 
 **CipherPay FHE transaction:**
 ```
-Value: 0 ETH                      ← no ETH in value field
-Input: ctHash=32773097825...       ← ciphertext handle, meaningless without permit
+Value: 0.04844 ETH                ← ETH transfer visible (Ethereum L1 limitation)
+Input: ctHash=32773097825...      ← ciphertext handle, meaningless without permit
+Storage: euint64 handle only      ← encrypted, unreadable on Etherscan
+CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 ```
+
+> **Note:** `msg.value` (ETH amount) is always visible on Ethereum L1 — this is a protocol limitation, not solvable by any encryption. FHE encrypts **contract state**: invoice amounts, recipients, collected totals, and tax calculations stored as `euint64`/`eaddress` are unreadable on Etherscan. Only authorized parties with EIP-712 permits can decrypt.
 
 ---
 
@@ -270,9 +276,10 @@ Input: ctHash=32773097825...       ← ciphertext handle, meaningless without pe
 
 ### Wave 1 ✅ (Current)
 
-**Smart Contracts (6 deployed on Sepolia):**
+**Smart Contracts (7 deployed on Sepolia):**
 - [x] CipherPayFHE — primary FHE contract with 18+ encrypted operations (euint64, euint32, euint8, euint128, eaddress, ebool)
 - [x] CipherPaySimple — real ETH transfers, vesting escrow, pause/resume, cancel with refund
+- [x] CipherSubscription — FHE-encrypted subscription tiers with recurring payments
 - [x] PaymentProof — on-chain payment receipts with encrypted amounts
 - [x] SharedInvoice — split bills with encrypted individual shares
 - [x] InvoiceMetrics — encrypted per-user payment analytics (volume, count)
@@ -365,6 +372,7 @@ TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/deploy-fhe.cts --n
 contracts/
 ├── CipherPayFHE.sol           # Primary — euint64, FHE.add, FHE.allow
 ├── CipherPaySimple.sol        # Fallback — real ETH transfers, vesting escrow
+├── CipherSubscription.sol     # FHE-encrypted subscription tiers
 └── CipherPay.sol              # Original FHE v1
 
 src/

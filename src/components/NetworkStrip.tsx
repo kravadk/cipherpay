@@ -62,13 +62,13 @@ export function NetworkStrip() {
     <div className={`fixed top-0 left-0 right-0 z-[10007] h-[2px] transition-colors duration-500 ${stripColor}`}>
       <div className="absolute top-0 right-8 px-3 py-1 bg-bg-base/80 backdrop-blur-md rounded-b-lg border-x border-b border-border-default flex items-center gap-2">
         <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${dotColor}`} />
-        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">
+        <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">
           {label}
         </span>
         {isWrongNetwork && (
           <button
             onClick={() => switchChain({ chainId: TARGET_CHAIN_ID })}
-            className="text-[10px] font-bold text-yellow-400 hover:text-yellow-300 underline ml-1"
+            className="text-xs font-bold text-yellow-400 hover:text-yellow-300 underline ml-1"
           >
             Switch
           </button>

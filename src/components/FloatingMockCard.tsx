@@ -10,12 +10,12 @@ export function FloatingMockCard() {
     >
       <div className="flex justify-between items-start mb-8">
         <div className="space-y-1">
-          <p className="text-[10px] text-text-muted uppercase tracking-widest">Invoice Hash</p>
+          <p className="text-xs text-text-muted uppercase tracking-widest">Invoice Hash</p>
           <p className="text-sm font-mono text-white">cx8f...3a2</p>
         </div>
         <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Settled</span>
+          <span className="text-xs font-bold text-primary uppercase tracking-widest">Settled</span>
         </div>
       </div>
 
@@ -32,17 +32,17 @@ export function FloatingMockCard() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
-            <p className="text-[10px] text-text-muted uppercase tracking-widest">From</p>
+            <p className="text-xs text-text-muted uppercase tracking-widest">From</p>
             <p className="text-xs font-mono text-text-secondary">0x3f...••••</p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] text-text-muted uppercase tracking-widest">To</p>
+            <p className="text-xs text-text-muted uppercase tracking-widest">To</p>
             <p className="text-xs font-mono text-text-secondary">0x9a...••••</p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <div className="flex justify-between text-[10px] uppercase tracking-widest">
+          <div className="flex justify-between text-xs uppercase tracking-widest">
             <span className="text-text-muted">Settlement Progress</span>
             <span className="text-primary font-bold">100%</span>
           </div>
@@ -57,7 +57,7 @@ export function FloatingMockCard() {
         </div>
       </div>
 
-      <div className="mt-8 flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-widest">
+      <div className="mt-8 flex items-center gap-2 text-xs text-text-muted uppercase tracking-widest">
         <CheckCircle className="w-3 h-3 text-primary" />
         <span>Verified on Sepolia · Encrypted</span>
       </div>

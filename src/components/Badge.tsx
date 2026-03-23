@@ -17,7 +17,7 @@ export function StatusBadge({ status }: { status: 'open' | 'settled' | 'cancelle
   };
 
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${styles[status]}`}>
+    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${styles[status]}`}>
       {icons[status]}
       {status}
     </div>
@@ -42,7 +42,7 @@ export function TypeBadge({ type }: { type: 'standard' | 'multi-pay' | 'recurrin
   };
 
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${styles[type]}`}>
+    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${styles[type]}`}>
       {icons[type]}
       {type.replace('-', ' ')}
     </div>

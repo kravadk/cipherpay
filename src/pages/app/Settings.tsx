@@ -116,7 +116,7 @@ export function Settings() {
         </div>
 
         {/* Stats from blockchain */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: 'Total', value: totalInvoices },
             { label: 'Sent', value: sentInvoices },
@@ -126,7 +126,7 @@ export function Settings() {
           ].map((s) => (
             <div key={s.label} className="text-center p-3 bg-surface-2 rounded-xl border border-border-default">
               <p className="text-xl font-bold text-white">{s.value}</p>
-              <p className="text-[10px] text-text-muted uppercase tracking-widest mt-1">{s.label}</p>
+              <p className="text-xs text-text-muted uppercase tracking-widest mt-1">{s.label}</p>
             </div>
           ))}
         </div>
@@ -160,7 +160,7 @@ export function Settings() {
               </p>
             </div>
           </div>
-          <span className={`text-[9px] font-bold px-2 py-1 rounded ${
+          <span className={`text-xs font-bold px-2 py-1 rounded ${
             isFheReady ? 'bg-blue-500/20 text-blue-400' : isFheConnecting ? 'bg-yellow-500/20 text-yellow-400' : 'bg-surface-3 text-text-dim'
           }`}>{isFheReady ? 'ACTIVE' : isFheConnecting ? 'LOADING' : 'STANDBY'}</span>
         </div>
@@ -261,7 +261,7 @@ export function Settings() {
             <div className="flex items-center gap-2">
               <FileText className="w-3.5 h-3.5 text-text-muted" />
               <span className="text-sm text-text-secondary">CipherPaySimple</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">FALLBACK</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">FALLBACK</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-text-dim">{CIPHERPAY_SIMPLE_ADDRESS.slice(0, 8)}...{CIPHERPAY_SIMPLE_ADDRESS.slice(-6)}</span>
@@ -368,7 +368,7 @@ export function Settings() {
           </div>
         </div>
 
-        <p className="text-[10px] text-text-dim">Preferences are session-based and reset on page reload. Persistent preferences require a backend (Wave 2).</p>
+        <p className="text-xs text-text-dim">Preferences are session-based and reset on page reload. Persistent preferences require a backend (Wave 2).</p>
       </motion.div>
 
       {/* Quick Actions */}

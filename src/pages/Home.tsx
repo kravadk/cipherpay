@@ -82,7 +82,7 @@ function EncryptionDemo() {
           animate={{ scale: phase === i ? 1.05 : 0.95, opacity: phase === i ? 1 : 0.3 }}
           className="text-center space-y-2 px-4"
         >
-          <p className="text-[10px] text-text-muted uppercase tracking-widest">{p.label}</p>
+          <p className="text-xs text-text-muted uppercase tracking-widest">{p.label}</p>
           <p className={`font-mono text-sm font-bold ${p.color}`}>{p.value}</p>
         </motion.div>
       ))}
@@ -340,7 +340,7 @@ export function Home() {
                     className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                     <span className="text-primary text-lg font-bold">✓</span>
                   </motion.div>
-                  <span className="text-[10px] font-mono text-text-muted">{step}</span>
+                  <span className="text-xs font-mono text-text-muted">{step}</span>
                 </div>
                 {i < 4 && <motion.div initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }} transition={{ delay: 0.5 + i * 0.15, duration: 0.3 }} className="w-6 md:w-12 h-px bg-primary/30 origin-left mb-5" />}
               </motion.div>
@@ -451,8 +451,8 @@ export function Home() {
         <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-border-default flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-text-muted">Built with Fhenix FHE for Privacy-by-Design dApp Buildathon</p>
           <div className="flex items-center gap-4">
-            <span className="text-[10px] px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20 font-bold">Fhenix Testnet</span>
-            <span className="text-[10px] px-2 py-1 rounded bg-surface-2 text-text-muted border border-border-default font-bold">Sepolia</span>
+            <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20 font-bold">Fhenix Testnet</span>
+            <span className="text-xs px-2 py-1 rounded bg-surface-2 text-text-muted border border-border-default font-bold">Sepolia</span>
           </div>
         </div>
       </footer>

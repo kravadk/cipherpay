@@ -137,16 +137,16 @@ export function AuditModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                       <span className="text-sm font-bold uppercase tracking-widest">Package Generated</span>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] text-text-muted uppercase tracking-widest">Audit Key</p>
+                      <p className="text-xs text-text-muted uppercase tracking-widest">Audit Key</p>
                       <div className="flex items-center justify-between p-3 bg-black rounded-lg border border-border-default">
                         <p className="text-xs font-mono text-white truncate">ak_fhenix_3f8a...2c1b</p>
                         <Copy className="w-4 h-4 text-text-muted cursor-pointer hover:text-white transition-colors" />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] text-text-muted uppercase tracking-widest">Package JSON</p>
+                      <p className="text-xs text-text-muted uppercase tracking-widest">Package JSON</p>
                       <div className="p-3 bg-black rounded-lg border border-border-default h-24 overflow-y-auto">
-                        <pre className="text-[10px] font-mono text-text-secondary">
+                        <pre className="text-xs font-mono text-text-secondary">
                           {`{
   "invoice": "cx8f...3a2",
   "scope": ["amount"],
@@ -159,7 +159,7 @@ export function AuditModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
                   </div>
                   <div className="flex items-center gap-3 p-4 bg-secondary/5 border border-secondary/20 rounded-xl">
                     <Info className="w-5 h-5 text-secondary shrink-0" />
-                    <p className="text-[10px] text-text-secondary leading-relaxed">
+                    <p className="text-xs text-text-secondary leading-relaxed">
                       Share this audit package only with trusted parties. Access will automatically expire in {expiry}.
                     </p>
                   </div>

@@ -172,14 +172,14 @@ export function HowItWorks() {
           </div>
           <div className="space-y-4">
             <div className="space-y-1">
-              <p className="text-[10px] text-text-muted uppercase tracking-widest">Access Scope</p>
+              <p className="text-xs text-text-muted uppercase tracking-widest">Access Scope</p>
               <div className="flex gap-2">
-                <span className="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full border border-secondary/20">Amount</span>
-                <span className="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full border border-secondary/20">Recipient</span>
+                <span className="px-3 py-1 bg-secondary/10 text-secondary text-xs font-bold rounded-full border border-secondary/20">Amount</span>
+                <span className="px-3 py-1 bg-secondary/10 text-secondary text-xs font-bold rounded-full border border-secondary/20">Recipient</span>
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-text-muted uppercase tracking-widest">Expiry</p>
+              <p className="text-xs text-text-muted uppercase tracking-widest">Expiry</p>
               <p className="text-sm text-white font-mono">2026-03-20 15:00 UTC</p>
             </div>
             <div className="h-[1px] bg-border-default w-full" />

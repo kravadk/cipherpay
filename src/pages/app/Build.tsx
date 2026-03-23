@@ -133,7 +133,7 @@ export function Build() {
         <div className="flex items-center gap-4">
           <div className="px-4 py-2 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Ethereum Sepolia</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">Ethereum Sepolia</span>
           </div>
           <a href={FHENIX_EXPLORER_URL} target="_blank" rel="noopener noreferrer">
             <Button variant="outline" size="sm" className="gap-2">
@@ -203,17 +203,17 @@ export function Build() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-border-default">
-                      <th className="px-6 py-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">Type</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">Function</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">Description</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">Auth</th>
+                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Type</th>
+                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Function</th>
+                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Description</th>
+                      <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Auth</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-default">
                     {contractFunctions.map((fn, i) => (
                       <tr key={i} className="group hover:bg-surface-2 transition-colors">
                         <td className="px-6 py-4">
-                          <span className={`text-[10px] font-bold px-2 py-1 rounded-md border ${
+                          <span className={`text-xs font-bold px-2 py-1 rounded-md border ${
                             fn.type === 'write' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary/10 border-secondary/20 text-secondary'
                           }`}>{fn.type.toUpperCase()}</span>
                         </td>
@@ -224,7 +224,7 @@ export function Build() {
                           <span className="text-xs text-text-muted">{fn.desc}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-[10px] text-text-dim">{fn.auth}</span>
+                          <span className="text-xs text-text-dim">{fn.auth}</span>
                         </td>
                       </tr>
                     ))}
@@ -248,8 +248,8 @@ export function Build() {
               <div className="relative bg-black border border-border-default rounded-[24px] overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-3 border-b border-border-default bg-surface-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{snippet.title}</span>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">{snippet.lang}</span>
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest">{snippet.title}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">{snippet.lang}</span>
                   </div>
                   <button onClick={() => copyCode(snippet.code)} className="p-1.5 text-text-muted hover:text-primary transition-colors">
                     <Copy className="w-4 h-4" />

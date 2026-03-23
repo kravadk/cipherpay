@@ -125,7 +125,7 @@ export function CipherDrop() {
                 <div key={campaign.id} className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-4">
                   <div className="flex justify-between items-start">
                     <h3 className="text-lg font-bold text-white">{campaign.name}</h3>
-                    <span className={`px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest ${
+                    <span className={`px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest ${
                       campaign.status === 'active' ? 'bg-primary/10 border-primary/20 text-primary' :
                       campaign.status === 'expired' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
                       'bg-surface-2 border-border-default text-text-muted'

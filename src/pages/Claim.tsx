@@ -43,7 +43,7 @@ export function Claim() {
           <div className="space-y-4">
             <h1 className="text-3xl font-bold text-white">Private Claim</h1>
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Hash</span>
+              <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Hash</span>
               <span className="text-xs font-mono text-text-secondary">{hash?.slice(0, 12)}...{hash?.slice(-6)}</span>
               <button
                 onClick={() => { if (hash) navigator.clipboard.writeText(hash); }}
@@ -75,7 +75,7 @@ export function Claim() {
       </div>
 
       <div className="px-8 py-6 text-center">
-        <p className="text-[10px] text-text-muted uppercase tracking-widest">
+        <p className="text-xs text-text-muted uppercase tracking-widest">
           Powered by CoFHE · Privacy by default on Ethereum Sepolia
         </p>
       </div>

@@ -112,9 +112,9 @@ export function SharedInvoicePage() {
   const getShareUrl = (hash: string) => `${window.location.origin}/shared/${hash}`;
 
   const statusBadge = (status: number) => {
-    if (status === 0) return <span className="text-[10px] font-bold px-2 py-1 rounded bg-secondary/10 text-secondary border border-secondary/20">OPEN</span>;
-    if (status === 1) return <span className="text-[10px] font-bold px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20">SETTLED</span>;
-    return <span className="text-[10px] font-bold px-2 py-1 rounded bg-surface-3 text-text-dim border border-border-default">CANCELLED</span>;
+    if (status === 0) return <span className="text-xs font-bold px-2 py-1 rounded bg-secondary/10 text-secondary border border-secondary/20">OPEN</span>;
+    if (status === 1) return <span className="text-xs font-bold px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20">SETTLED</span>;
+    return <span className="text-xs font-bold px-2 py-1 rounded bg-surface-3 text-text-dim border border-border-default">CANCELLED</span>;
   };
 
   return (
@@ -245,7 +245,7 @@ export function SharedInvoicePage() {
             {isCreating ? 'Creating...' : `Split ${totalAmount || '...'} ETH between ${participants.filter(p => p).length} people`}
           </Button>
 
-          <p className="text-[10px] text-text-dim text-center">Each participant's share is FHE-encrypted — only they can see their own amount</p>
+          <p className="text-xs text-text-dim text-center">Each participant's share is FHE-encrypted — only they can see their own amount</p>
         </div>
       )}
 

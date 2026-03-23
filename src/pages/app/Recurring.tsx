@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Repeat, Clock, CheckCircle, Pause, Play, X, AlertTriangle, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Invoice } from '../../store/useInvoiceStore';
 import { Button } from '../../components/Button';
 import { EncryptedAmount } from '../../components/EncryptedAmount';
@@ -33,6 +34,7 @@ function CountdownTimer({ targetDate }: { targetDate: string }) {
 }
 
 export function Recurring() {
+  const navigate = useNavigate();
   const { invoices: allInvoices } = useInvoices();
   const invoices = allInvoices;
   const { isDeployed } = useContractStatus();
@@ -95,7 +97,7 @@ export function Recurring() {
       cancelled: { bg: 'bg-surface-2 border-border-default text-text-muted', text: 'Cancelled' },
     };
     const s = map[status] || map.cancelled;
-    return <span className={`px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest ${s.bg}`}>{s.text}</span>;
+    return <span className={`px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest ${s.bg}`}>{s.text}</span>;
   };
 
   return (
@@ -108,15 +110,15 @@ export function Recurring() {
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-2">
-          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Active Schedules</p>
+          <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Active Schedules</p>
           <span className="text-2xl font-bold text-white">{activeCount}</span>
         </div>
         <div className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-2">
-          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Total Paid</p>
+          <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Total Paid</p>
           <span className="text-2xl font-bold text-white">{settledCount}</span>
         </div>
         <div className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-2">
-          <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Next Payment In</p>
+          <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Next Payment In</p>
           <span className="text-2xl font-bold">
             {nearestNext?.nextPaymentDate ? <CountdownTimer targetDate={nearestNext.nextPaymentDate} /> : <span className="text-text-muted">—</span>}
           </span>
@@ -129,13 +131,13 @@ export function Recurring() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border-default">
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Hash</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Recipient</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Frequency</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Next Date</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Cycles</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Status</th>
-                <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Hash</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Recipient</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Frequency</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Next Date</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Cycles</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Status</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-default">
@@ -213,7 +215,7 @@ export function Recurring() {
                     <div className="flex flex-col items-center gap-4">
                       <Repeat className="w-12 h-12 text-text-dim" />
                       <p className="text-text-muted">No recurring invoices yet</p>
-                      <Button variant="primary" size="sm" onClick={() => window.location.href = '/app/new-cipher'}>
+                      <Button variant="primary" size="sm" onClick={() => navigate('/app/new-cipher')}>
                         Create Recurring Cipher
                       </Button>
                     </div>

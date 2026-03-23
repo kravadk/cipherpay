@@ -183,7 +183,7 @@ export function WalletModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
             )}
 
             <div className="mt-8 pt-6 border-t border-border-default text-center">
-              <p className="text-[10px] text-text-muted uppercase tracking-widest">
+              <p className="text-xs text-text-muted uppercase tracking-widest">
                 By connecting, you agree to the CipherPay Manifesto.
               </p>
             </div>

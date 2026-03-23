@@ -132,7 +132,7 @@ export function DatePicker({ value, onChange, disabled, minDate, placeholder = '
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-0.5">
         {DAYS.map(d => (
-          <div key={d} className="text-center text-[10px] font-bold text-text-muted uppercase py-1">{d}</div>
+          <div key={d} className="text-center text-xs font-bold text-text-muted uppercase py-1">{d}</div>
         ))}
       </div>
 

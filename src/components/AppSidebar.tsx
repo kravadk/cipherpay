@@ -85,7 +85,7 @@ function SidebarItem({ icon: Icon, label, path, isActive, isComingSoon, badge, b
         <span className="text-sm">{label}</span>
       </div>
       {badge && (
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${badgeColor || 'bg-surface-3 text-text-muted'}`}>
+        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${badgeColor || 'bg-surface-3 text-text-muted'}`}>
           {badge}
         </span>
       )}
@@ -117,7 +117,7 @@ function SidebarSection({ label, children, badge }: SidebarSectionProps) {
         <div className="flex items-center gap-2">
           {label}
           {badge && (
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
               badge === 'FEATURED' ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'
             }`}>
               {badge}
@@ -192,23 +192,23 @@ export function AppSidebar() {
         {permitActive ? (
           <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-xl" title={`Signed permit expires ${permitExpiry ? new Date(permitExpiry).toLocaleString('en-US') : 'N/A'}`}>
             <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Permit active</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-widest">Permit active</span>
           </div>
         ) : (
           <div className="flex items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">
             <div className="w-1.5 h-1.5 rounded-full bg-text-muted" />
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">No permit</span>
+            <span className="text-xs font-bold text-text-muted uppercase tracking-widest">No permit</span>
           </div>
         )}
 
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-surface-2 border border-border-default flex items-center justify-center text-[10px] font-bold">
+            <div className="w-8 h-8 rounded-full bg-surface-2 border border-border-default flex items-center justify-center text-xs font-bold">
               {address?.slice(2, 4)}
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-white">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
-              <span className="text-[10px] text-text-muted uppercase tracking-widest">Connected</span>
+              <span className="text-xs text-text-muted uppercase tracking-widest">Connected</span>
             </div>
           </div>
           <button onClick={() => navigator.clipboard.writeText(address || '')} className="p-1.5 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-secondary transition-colors">

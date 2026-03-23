@@ -13,7 +13,7 @@ export function StepIndicator({ currentStep, totalSteps, labels }: { currentStep
             }`}>
               {currentStep > i + 1 ? '✓' : i + 1}
             </div>
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${
+            <span className={`text-xs font-bold uppercase tracking-widest ${
               currentStep >= i + 1 ? 'text-white' : 'text-text-muted'
             }`}>{label}</span>
           </div>

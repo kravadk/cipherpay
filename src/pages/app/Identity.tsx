@@ -197,12 +197,12 @@ export function Identity() {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-border-default">
-                        <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Hash</th>
-                        <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Type</th>
-                        <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Direction</th>
-                        <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Date</th>
-                        <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Amount</th>
-                        <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
+                        <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Hash</th>
+                        <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Type</th>
+                        <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Direction</th>
+                        <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Date</th>
+                        <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Amount</th>
+                        <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-default">
@@ -253,7 +253,7 @@ export function Identity() {
                   <div className="space-y-1">
                     <p className="text-sm font-bold text-white">Show Encrypted Amounts</p>
                     <p className="text-xs text-text-secondary">Reveal amounts globally across all tables</p>
-                    <p className="text-[10px] text-text-dim">Requires wallet signature (permit)</p>
+                    <p className="text-xs text-text-dim">Requires wallet signature (permit)</p>
                   </div>
                   <button onClick={handleTogglePermit}
                     className={`w-12 h-6 rounded-full transition-colors relative ${revealAmounts ? 'bg-primary' : 'bg-surface-3'}`}>
@@ -336,12 +336,12 @@ export function Identity() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-border-default">
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Invoice Ref</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Created</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Expiry</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Scope</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Status</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Invoice Ref</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Created</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Expiry</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Scope</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Status</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-default">
@@ -352,7 +352,7 @@ export function Identity() {
                         <td className="px-8 py-5"><span className="text-xs text-text-secondary">{pkg.expiry}</span></td>
                         <td className="px-8 py-5"><span className="text-xs text-text-secondary">{pkg.scope}</span></td>
                         <td className="px-8 py-5">
-                          <span className={`px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest ${
+                          <span className={`px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest ${
                             pkg.status === 'Active' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface-2 border-border-default text-text-muted'
                           }`}>{pkg.status}</span>
                         </td>
@@ -432,7 +432,7 @@ export function Identity() {
               {auditStep === 3 && generatedPackage && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Audit Package</label>
+                    <label className="text-xs font-bold text-text-muted uppercase tracking-widest">Audit Package</label>
                     <div className="p-4 bg-black rounded-xl font-mono text-xs text-text-secondary overflow-x-auto max-h-48">
                       <pre>{JSON.stringify(generatedPackage.package, null, 2)}</pre>
                     </div>
@@ -441,7 +441,7 @@ export function Identity() {
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Audit Key</label>
+                    <label className="text-xs font-bold text-text-muted uppercase tracking-widest">Audit Key</label>
                     <div className="p-4 bg-black rounded-xl font-mono text-xs text-primary break-all">{generatedPackage.key}</div>
                     <Button variant="ghost" size="sm" className="gap-1" onClick={() => { navigator.clipboard.writeText(generatedPackage.key); addToast('success', 'Audit key copied'); }}>
                       <Copy className="w-3.5 h-3.5" /> Copy Audit Key

@@ -60,7 +60,7 @@ export function SideDrawer({ isOpen, onClose, invoice }: { isOpen: boolean; onCl
 
                 {/* Invoice Hash */}
                 <div className="p-4 bg-surface-2 border border-border-default rounded-2xl space-y-2">
-                  <p className="text-[10px] text-text-muted uppercase tracking-widest">Invoice Hash</p>
+                  <p className="text-xs text-text-muted uppercase tracking-widest">Invoice Hash</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono text-white break-all">{invoice.hash.slice(0, 18)}...{invoice.hash.slice(-10)}</p>
                     <button onClick={() => handleCopy(invoice.hash, 'Hash')}
@@ -108,7 +108,7 @@ export function SideDrawer({ isOpen, onClose, invoice }: { isOpen: boolean; onCl
                 </div>
 
                 {/* Footer info — block, small */}
-                <div className="flex items-center justify-between text-[10px] text-text-dim px-1">
+                <div className="flex items-center justify-between text-xs text-text-dim px-1">
                   <span>Block #{invoice.blockNumber}</span>
                   <a href={`${FHENIX_EXPLORER_URL}/block/${invoice.blockNumber}`} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1 hover:text-primary transition-colors">

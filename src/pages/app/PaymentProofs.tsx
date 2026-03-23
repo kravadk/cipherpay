@@ -131,7 +131,7 @@ export function PaymentProofs() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                     <div>
                       <p className="text-text-muted uppercase tracking-widest mb-1">Role</p>
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                      <span className={`px-2 py-1 rounded text-xs font-bold ${
                         isPayer(proof) ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-primary/10 text-primary border border-primary/20'
                       }`}>
                         {isPayer(proof) ? 'PAYER' : 'CREATOR'}

@@ -59,7 +59,7 @@ export function CipherCard({ address, onQrClick }: { address: string; onQrClick?
         </div>
 
         <div className="space-y-1">
-          <p className="text-[10px] text-text-muted uppercase tracking-[0.2em]">Wallet Identity</p>
+          <p className="text-xs text-text-muted uppercase tracking-[0.2em]">Wallet Identity</p>
           <p className="text-xl font-mono font-bold text-white tracking-wider">
             {address.slice(0, 6)}••••{address.slice(-4)}
           </p>
@@ -67,10 +67,10 @@ export function CipherCard({ address, onQrClick }: { address: string; onQrClick?
 
         <div className="flex justify-between items-end">
           <div className="space-y-1">
-            <p className="text-[10px] text-text-muted uppercase tracking-widest">Ethereum Sepolia</p>
+            <p className="text-xs text-text-muted uppercase tracking-widest">Ethereum Sepolia</p>
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Testnet Active</span>
+              <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Testnet Active</span>
             </div>
           </div>
           <button

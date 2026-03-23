@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Plus, Trash2, Upload, Terminal, CheckCircle, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import type { Invoice } from '../../store/useInvoiceStore';
 import { useContractStatus } from '../../hooks/useContractStatus';
@@ -8,6 +9,7 @@ import { useInvoices } from '../../hooks/useInvoices';
 import { useToastStore } from '../../components/ToastContainer';
 
 export function Batch() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'new' | 'history'>('new');
   const [recipients, setRecipients] = useState<{ address: string; amount: string }[]>([
     { address: '', amount: '' },
@@ -158,9 +160,9 @@ export function Batch() {
             <div className="bg-surface-1 border border-border-default rounded-[32px] p-6 space-y-4">
               {/* Header */}
               <div className="grid grid-cols-[40px_1fr_120px_40px] gap-4 px-2">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">#</span>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Address</span>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Amount (ETH)</span>
+                <span className="text-xs font-bold text-text-muted uppercase tracking-widest">#</span>
+                <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Address</span>
+                <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Amount (ETH)</span>
                 <span />
               </div>
 
@@ -222,7 +224,7 @@ export function Batch() {
                 </div>
               </div>
 
-              <p className="text-[10px] text-text-muted px-2">All amounts are independently encrypted via Fhenix FHE</p>
+              <p className="text-xs text-text-muted px-2">All amounts are independently encrypted via Fhenix FHE</p>
             </div>
 
             {/* Deploy Logs */}
@@ -230,7 +232,7 @@ export function Batch() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary">
                   <Terminal className="w-4 h-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Deploy Log</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">Deploy Log</span>
                 </div>
                 <div className="p-6 bg-black rounded-2xl border border-border-default font-mono text-xs space-y-2">
                   {deployLogs.map((log, i) => (
@@ -272,7 +274,7 @@ export function Batch() {
               <Button variant="outline" onClick={() => { setDeploySuccess(false); setRecipients([{ address: '', amount: '' }]); setDeployLogs([]); }}>
                 Create Another
               </Button>
-              <Button onClick={() => window.location.href = '/app/dashboard'} className="gap-2">
+              <Button onClick={() => navigate('/app/dashboard')} className="gap-2">
                 Go to Dashboard <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
@@ -291,11 +293,11 @@ export function Batch() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-border-default">
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Batch Hash</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Date</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Recipients</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Status</th>
-                      <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Batch Hash</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Date</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Recipients</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Status</th>
+                      <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-default">
@@ -311,7 +313,7 @@ export function Batch() {
                           <span className="text-sm text-white">{invoice.recipientCount ?? '—'}</span>
                         </td>
                         <td className="px-8 py-5">
-                          <span className={`px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest ${
+                          <span className={`px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest ${
                             invoice.status === 'settled' ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-secondary/10 border-secondary/20 text-secondary'
                           }`}>{invoice.status}</span>
                         </td>

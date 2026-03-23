@@ -276,7 +276,7 @@ export function Dashboard() {
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
             className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-3 hover:border-primary/20 transition-colors">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{stat.label}</p>
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-widest">{stat.label}</p>
               {i === 0 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
             </div>
             <div className="flex items-baseline gap-2">
@@ -289,7 +289,7 @@ export function Dashboard() {
               )}
             </div>
             {(stat as any).trend && (
-              <p className="text-[10px] text-text-secondary">{(stat as any).trend}</p>
+              <p className="text-xs text-text-secondary">{(stat as any).trend}</p>
             )}
             {/* Mini progress bar for settle rate */}
             {stat.label === 'Settled' && totalCount > 0 && (
@@ -323,7 +323,7 @@ export function Dashboard() {
                   URL.revokeObjectURL(url);
                   addToast('success', 'CSV exported');
                 }}
-                className="text-[10px] text-text-muted hover:text-primary transition-colors uppercase tracking-widest"
+                className="text-xs text-text-muted hover:text-primary transition-colors uppercase tracking-widest"
               >
                 Export CSV
               </button>
@@ -371,11 +371,11 @@ export function Dashboard() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border-default">
-                  <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Hash</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Type</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Status</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest">Amount</th>
-                  <th className="px-8 py-5 text-[10px] font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
+                  <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Hash</th>
+                  <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Type</th>
+                  <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Status</th>
+                  <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Amount</th>
+                  <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-default">
@@ -409,7 +409,7 @@ export function Dashboard() {
                           <div className="w-24 h-1 bg-surface-2 rounded-full overflow-hidden">
                             <div className="h-full bg-primary rounded-full" style={{ width: `${invoice.collectedPercent || 0}%` }} />
                           </div>
-                          <p className="text-[9px] text-text-muted">{invoice.totalCollected}/{invoice.targetAmount} ETH · {invoice.payerCount} payer{(invoice.payerCount || 0) !== 1 ? 's' : ''}</p>
+                          <p className="text-xs text-text-muted">{invoice.totalCollected}/{invoice.targetAmount} ETH · {invoice.payerCount} payer{(invoice.payerCount || 0) !== 1 ? 's' : ''}</p>
                         </div>
                       )}
                     </td>

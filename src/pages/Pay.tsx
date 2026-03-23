@@ -371,17 +371,17 @@ export function Pay() {
 
                 <div className="space-y-4 p-6 bg-surface-2 border border-border-default rounded-2xl">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Invoice #</span>
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Invoice #</span>
                     <span className="text-xs font-mono text-text-secondary">{hash?.slice(0, 10)}...{hash?.slice(-6)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Type</span>
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Type</span>
                     <span className={`text-xs font-bold uppercase px-2 py-1 rounded-md border ${
                       isMultiPay ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' : 'bg-surface-3 border-border-default text-white'
                     }`}>{typeLabel}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Status</span>
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Status</span>
                     <div className="flex items-center gap-2">
                       {invoice.status === 0 ? <><Clock className="w-3.5 h-3.5 text-secondary" /><span className="text-xs font-bold text-secondary uppercase">Open</span></>
                         : invoice.status === 1 ? <><CheckCircle className="w-3.5 h-3.5 text-primary" /><span className="text-xs font-bold text-primary uppercase">Settled</span></>
@@ -390,7 +390,7 @@ export function Pay() {
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Creator</span>
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Creator</span>
                     <span className="text-xs font-mono text-text-secondary">{invoice.creator.slice(0, 6)}...{invoice.creator.slice(-4)}</span>
                   </div>
                 </div>
@@ -597,10 +597,10 @@ export function Pay() {
                               ) : (i === 0 || arr[i-1]?.done) ? (
                                 <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
                               ) : (
-                                <span className="text-[10px] text-text-dim font-bold">{i + 1}</span>
+                                <span className="text-xs text-text-dim font-bold">{i + 1}</span>
                               )}
                             </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-widest ${step.done ? 'text-primary' : 'text-text-muted'}`}>{step.label}</span>
+                            <span className={`text-xs font-bold uppercase tracking-widest ${step.done ? 'text-primary' : 'text-text-muted'}`}>{step.label}</span>
                             {i < arr.length - 1 && <div className={`flex-1 h-px mx-2 ${step.done ? 'bg-primary' : 'bg-border-default'}`} />}
                           </div>
                         ))}
@@ -650,7 +650,7 @@ export function Pay() {
                           level="M"
                         />
                       </div>
-                      <p className="text-[10px] text-text-dim text-center">Scan to verify this payment on-chain</p>
+                      <p className="text-xs text-text-dim text-center">Scan to verify this payment on-chain</p>
 
                       <div className="p-4 bg-surface-2 border border-border-default rounded-2xl space-y-3">
                         <div className="flex justify-between items-center">
@@ -710,7 +710,7 @@ export function Pay() {
       </div>
 
       <div className="px-8 py-6 text-center">
-        <p className="text-[10px] text-text-muted uppercase tracking-widest">◆ CipherPay · Privacy by default on Ethereum Sepolia</p>
+        <p className="text-xs text-text-muted uppercase tracking-widest">◆ CipherPay · Privacy by default on Ethereum Sepolia</p>
       </div>
 
       <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} />

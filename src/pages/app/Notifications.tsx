@@ -143,15 +143,15 @@ export function Notifications() {
                   </div>
                   <p className="text-xs text-text-muted mt-1 truncate">{notif.message}</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <span className="text-[10px] text-text-dim">{formatTimeAgo(notif.timestamp)}</span>
-                    <span className="text-[10px] text-text-dim">Block {notif.blockNumber.toString()}</span>
+                    <span className="text-xs text-text-dim">{formatTimeAgo(notif.timestamp)}</span>
+                    <span className="text-xs text-text-dim">Block {notif.blockNumber.toString()}</span>
                     {notif.txHash && (
                       <a
                         href={`${FHENIX_EXPLORER_URL}/tx/${notif.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
-                        className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
                       >
                         Etherscan <ExternalLink className="w-2.5 h-2.5" />
                       </a>
@@ -159,7 +159,7 @@ export function Notifications() {
                   </div>
                 </div>
 
-                <span className="text-[10px] text-text-dim whitespace-nowrap mt-1">
+                <span className="text-xs text-text-dim whitespace-nowrap mt-1">
                   {formatTimeAgo(notif.timestamp)}
                 </span>
               </motion.div>
@@ -179,7 +179,7 @@ export function Notifications() {
       {/* Source info */}
       <div className="flex items-center gap-2 px-2">
         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        <span className="text-[10px] text-text-dim uppercase tracking-widest">
+        <span className="text-xs text-text-dim uppercase tracking-widest">
           Live from Ethereum Sepolia blockchain events
         </span>
       </div>

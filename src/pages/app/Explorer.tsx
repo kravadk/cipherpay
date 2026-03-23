@@ -23,13 +23,13 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
     >
       <div className="flex justify-between items-start mb-6">
         <div className="space-y-1">
-          <p className="text-[10px] text-text-muted uppercase tracking-widest">Hash</p>
+          <p className="text-xs text-text-muted uppercase tracking-widest">Hash</p>
           <CipherScramble
             text={invoice.hash.slice(0, 8) + '...' + invoice.hash.slice(-4)}
             className="text-sm font-mono text-white group-hover:text-primary transition-colors"
           />
         </div>
-        <div className={`px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest ${
+        <div className={`px-2 py-1 rounded-md border text-xs font-bold uppercase tracking-widest ${
           invoice.status === 'settled'
             ? 'bg-primary/10 border-primary/20 text-primary'
             : invoice.status === 'open'
@@ -44,11 +44,11 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="space-y-1">
-          <p className="text-[10px] text-text-muted uppercase tracking-widest">Type</p>
+          <p className="text-xs text-text-muted uppercase tracking-widest">Type</p>
           <p className="text-xs font-bold text-text-secondary uppercase tracking-widest">{invoice.type}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] text-text-muted uppercase tracking-widest">Created</p>
+          <p className="text-xs text-text-muted uppercase tracking-widest">Created</p>
           <p className="text-xs text-text-secondary">{new Date(invoice.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
         </div>
       </div>
@@ -56,7 +56,7 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
       <div className="flex items-center justify-between pt-4 border-t border-border-default">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Block {invoice.blockNumber}</span>
+          <span className="text-xs font-bold text-text-muted uppercase tracking-widest">Block {invoice.blockNumber}</span>
         </div>
         <ArrowRight className="w-4 h-4 text-text-muted group-hover:text-primary transition-colors" />
       </div>
@@ -217,7 +217,7 @@ export function Explorer() {
                 {/* Hash + Status */}
                 <div className="p-6 bg-surface-2 border border-border-default rounded-3xl space-y-6">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-text-muted uppercase tracking-widest">Invoice Hash</p>
+                    <p className="text-xs text-text-muted uppercase tracking-widest">Invoice Hash</p>
                     <div className="flex items-center justify-between group">
                       <p className="text-sm font-mono text-white break-all">{selectedInvoice.hash}</p>
                       <button onClick={() => handleCopyHash(selectedInvoice.hash)} className="p-2 text-text-muted hover:text-primary transition-colors">
@@ -227,7 +227,7 @@ export function Explorer() {
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-1">
-                      <p className="text-[10px] text-text-muted uppercase tracking-widest">Status</p>
+                      <p className="text-xs text-text-muted uppercase tracking-widest">Status</p>
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${
                           selectedInvoice.status === 'settled' ? 'bg-primary' :
@@ -238,7 +238,7 @@ export function Explorer() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] text-text-muted uppercase tracking-widest">Type</p>
+                      <p className="text-xs text-text-muted uppercase tracking-widest">Type</p>
                       <span className="text-sm font-bold text-white uppercase tracking-widest">{selectedInvoice.type}</span>
                     </div>
                   </div>
@@ -249,7 +249,7 @@ export function Explorer() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-secondary">
                       <Users className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Collection Progress</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">Collection Progress</span>
                     </div>
                     <div className="p-5 bg-surface-2 border border-border-default rounded-2xl space-y-4">
                       <div className="flex justify-between items-end">
@@ -278,7 +278,7 @@ export function Explorer() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-secondary">
                     <Lock className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Encrypted Data (FHE Protected)</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Encrypted Data (FHE Protected)</span>
                   </div>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-4 bg-surface-2 border border-border-default rounded-2xl">

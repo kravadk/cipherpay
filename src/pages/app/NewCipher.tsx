@@ -466,18 +466,18 @@ export function NewCipher() {
                       disabled={formData.batchRecipients.length >= 20}>
                       <Plus className="w-4 h-4" /> Add Recipient
                     </Button>
-                    <p className="text-[10px] text-text-muted">Each amount encrypted individually. Max 20 recipients.</p>
+                    <p className="text-xs text-text-muted">Each amount encrypted individually. Max 20 recipients.</p>
                   </div>
                 )}
 
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
-                    Memo (Optional) <span className="text-[9px] font-normal text-text-dim normal-case">— visible on-chain</span>
+                    Memo (Optional) <span className="text-xs font-normal text-text-dim normal-case">— visible on-chain</span>
                   </label>
                   <input type="text" placeholder="What is this for?" maxLength={256} value={formData.memo}
                     onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
                     className="w-full h-14 px-6 bg-surface-2 border border-border-default rounded-2xl text-white focus:border-primary/40 focus:outline-none" />
-                  <p className="text-[10px] text-text-dim text-right">{formData.memo.length}/256</p>
+                  <p className="text-xs text-text-dim text-right">{formData.memo.length}/256</p>
                 </div>
 
                 {/* Invoice Breakdown — collapsible line items */}
@@ -494,7 +494,7 @@ export function NewCipher() {
                     <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
                       Breakdown <Lock className="w-3 h-3 text-text-dim" />
                     </label>
-                    <span className="text-[9px] text-text-dim">{(formData as any).breakdownItems?.length || 0} items — each encrypted via FHE</span>
+                    <span className="text-xs text-text-dim">{(formData as any).breakdownItems?.length || 0} items — each encrypted via FHE</span>
                   </div>
                   {(formData as any).breakdownItems?.map((item: any, i: number) => (
                     <div key={i} className="flex gap-2">
@@ -674,7 +674,7 @@ export function NewCipher() {
                         <div className="w-full h-2 bg-surface-3 rounded-full overflow-hidden">
                           <div className="h-full bg-yellow-500/50 rounded-full" style={{ width: '0%' }} />
                         </div>
-                        <div className="flex justify-between text-[10px] text-text-dim">
+                        <div className="flex justify-between text-xs text-text-dim">
                           <span>Now</span>
                           <span>{new Date(formData.unlockDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
@@ -731,7 +731,7 @@ export function NewCipher() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-blue-400">
                     <Lock className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">FHE Encrypted (Fhenix CoFHE)</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">FHE Encrypted (Fhenix CoFHE)</span>
                   </div>
                   <div className="p-6 bg-blue-500/5 border border-blue-500/20 rounded-3xl space-y-4">
                     {encryptedFields.map((field, i) => (
@@ -744,7 +744,7 @@ export function NewCipher() {
                       <p className="text-sm text-text-muted">No data to encrypt — fill in the form</p>
                     )}
                     <div className="pt-3 border-t border-blue-500/10 space-y-2">
-                      <p className="text-[10px] text-blue-400/60 uppercase tracking-widest">Encryption method</p>
+                      <p className="text-xs text-blue-400/60 uppercase tracking-widest">Encryption method</p>
                       <p className="text-xs text-blue-300">TFHE (Fully Homomorphic Encryption)</p>
                       <p className="text-xs text-blue-300">ZK Proof of Knowledge verification</p>
                       <p className="text-xs text-blue-300">CoFHE Threshold Network decryption</p>
@@ -756,7 +756,7 @@ export function NewCipher() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-text-muted">
                     <Eye className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Public on-chain</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Public on-chain</span>
                   </div>
                   <div className="p-6 bg-surface-2 border border-border-default rounded-3xl space-y-4">
                     <div className="flex justify-between text-sm">
@@ -782,7 +782,7 @@ export function NewCipher() {
                       </div>
                     )}
                   </div>
-                  <p className="text-[10px] text-text-dim">This information is visible to anyone on-chain</p>
+                  <p className="text-xs text-text-dim">This information is visible to anyone on-chain</p>
                 </div>
               </div>
 
@@ -835,7 +835,7 @@ export function NewCipher() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-primary">
                     <Terminal className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Deploy Log</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Deploy Log</span>
                   </div>
                   <div className="p-6 bg-black rounded-2xl border border-border-default font-mono text-xs space-y-2">
                     {deployLogs.map((log, i) => (
@@ -879,7 +879,7 @@ export function NewCipher() {
               </div>
               <div className="p-6 bg-surface-2 border border-border-default rounded-3xl w-full max-w-md space-y-4">
                 <div className="space-y-1">
-                  <p className="text-[10px] text-text-muted uppercase tracking-widest">Invoice Hash</p>
+                  <p className="text-xs text-text-muted uppercase tracking-widest">Invoice Hash</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono text-white break-all">{deployedHash}</p>
                     <button onClick={() => { if (deployedHash) { navigator.clipboard.writeText(deployedHash); addToast('success', 'Hash copied'); } }}
@@ -888,7 +888,7 @@ export function NewCipher() {
                 </div>
                 {deployedTxHash && (
                   <div className="space-y-1">
-                    <p className="text-[10px] text-text-muted uppercase tracking-widest">Transaction</p>
+                    <p className="text-xs text-text-muted uppercase tracking-widest">Transaction</p>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-mono text-text-secondary break-all">{deployedTxHash}</p>
                       <a href={`https://sepolia.etherscan.io/tx/${deployedTxHash}`} target="_blank" rel="noopener noreferrer"
@@ -897,7 +897,7 @@ export function NewCipher() {
                   </div>
                 )}
                 <div className="space-y-1">
-                  <p className="text-[10px] text-text-muted uppercase tracking-widest">Payment Link</p>
+                  <p className="text-xs text-text-muted uppercase tracking-widest">Payment Link</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono text-text-secondary break-all">{window.location.origin}/pay/{deployedHash}?amount={formData.amount}</p>
                     <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/pay/${deployedHash}?amount=${formData.amount}`); addToast('success', 'Link copied'); }}
@@ -917,7 +917,7 @@ export function NewCipher() {
                     level="M"
                   />
                 </div>
-                <p className="text-[10px] text-text-dim">Scan to open payment page</p>
+                <p className="text-xs text-text-dim">Scan to open payment page</p>
               </div>
               <div className="flex gap-4">
                 <Button variant="outline" onClick={() => navigate('/app/dashboard')} className="gap-2">
