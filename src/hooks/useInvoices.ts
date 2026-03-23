@@ -34,14 +34,14 @@ export function useInvoices() {
             functionName: 'getUserInvoices', args: [address],
           } as any) as `0x${string}`[];
           createdHashes = [...createdHashes, ...(created || [])];
-        } catch {}
+        } catch (e) { console.warn('[useInvoices] contract read failed:', e); }
         try {
           const paid = await publicClient.readContract({
             address: contractAddr, abi: CIPHERPAY_ABI as any,
             functionName: 'getPaidInvoices', args: [address],
           } as any) as `0x${string}`[];
           paidHashes = [...paidHashes, ...(paid || [])];
-        } catch {}
+        } catch (e) { console.warn('[useInvoices] contract read failed:', e); }
       }
 
       // Merge and deduplicate
@@ -80,7 +80,7 @@ export function useInvoices() {
                 data = result;
                 break;
               }
-            } catch {}
+            } catch (e) { console.warn('[useInvoices] contract read failed:', e); }
           }
           if (!data) return null;
 
@@ -118,7 +118,7 @@ export function useInvoices() {
                 functionName: 'getInvoiceAmount', args: [hash],
               }) as bigint;
               if (amountRaw > 0n) amountStr = formatEther(amountRaw);
-            } catch {}
+            } catch (e) { console.warn('[useInvoices] contract read failed:', e); }
           }
 
           // Read memo from contract (try both)
@@ -130,7 +130,7 @@ export function useInvoices() {
                 functionName: 'getInvoiceMemo', args: [hash],
               }) as string;
               if (memo) { memoStr = memo; break; }
-            } catch {}
+            } catch (e) { console.warn('[useInvoices] contract read failed:', e); }
           }
 
           // Multi-pay: try to get collected data from both contracts
@@ -153,7 +153,7 @@ export function useInvoices() {
                 const target = Number(targetAmount);
                 collectedPercent = target > 0 ? Math.min(100, (Number(totalCollected) / target) * 100) : 0;
                 break;
-              } catch {}
+              } catch (e) { console.warn('[useInvoices] contract read failed:', e); }
             }
           }
 

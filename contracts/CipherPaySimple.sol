@@ -312,8 +312,7 @@ contract CipherPaySimple {
             if (paid > 0) {
                 paymentAmounts[_invoiceHash][payers[i]] = 0;
                 (bool sent, ) = payable(payers[i]).call{value: paid}("");
-                // Don't revert if refund fails — just skip
-                if (!sent) continue;
+                require(sent, "Refund failed");
             }
         }
 

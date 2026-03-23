@@ -404,6 +404,25 @@ MIT
 
 ---
 
+## Hackathon Submission — Wave 1 (Ideathon)
+
+**Problem:** On-chain payments expose exact amounts, payment patterns, and business relationships to anyone on Etherscan. Businesses and freelancers can't use blockchain payments without sacrificing financial confidentiality.
+
+**Approach:** Use Fhenix Fully Homomorphic Encryption to store invoice amounts as `euint64` ciphertext. The CoFHE coprocessor performs arithmetic (add, subtract, compare) on encrypted data without decryption. Only authorized parties with EIP-712 permits can reveal amounts.
+
+**Key Features (Implemented):**
+- 4 invoice types (standard, multi-pay, recurring, vesting) with real ETH escrow and auto-settlement
+- 13+ FHE operations on encrypted data (add, sub, min, mul, div, gte, eq, select, decrypt, random)
+- Encrypted recipient addresses via `eaddress` — hidden on Etherscan
+- Encrypted tax calculation, platform aggregates, and subscription tiers
+- Full React frontend with 14 pages, permit-based reveal, payment stepper UI
+
+**Tech Stack:** Solidity 0.8.25 + Fhenix CoFHE contracts, @cofhe/sdk (client encryption), wagmi + viem, React + Tailwind, Hardhat (Cancun EVM), Ethereum Sepolia
+
+**Expected User Outcome:** A freelancer creates an encrypted invoice, shares the payment link, and the client pays — all without anyone on-chain knowing the amount, recipient, or payment status. Only the two parties can decrypt via wallet signatures.
+
+---
+
 <div align="center">
 
 Built with Fhenix FHE for the Privacy-by-Design dApp Buildathon

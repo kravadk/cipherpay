@@ -47,6 +47,9 @@ contract CipherPayFHE {
     mapping(bytes32 => ebool) private _paidCheckResults;
     mapping(bytes32 => BreakdownItem[]) private _breakdowns;
     mapping(bytes32 => uint256) public breakdownCount;
+    mapping(bytes32 => uint256) private _ethHeld;
+    mapping(bytes32 => address[]) private _payers;
+    mapping(bytes32 => mapping(address => uint256)) private _payerEth;
 
     euint64 public platformVolume;
     euint32 public platformInvoiceCount;
@@ -169,13 +172,20 @@ contract CipherPayFHE {
         if (!hasPaid[_invoiceHash][msg.sender]) {
             hasPaid[_invoiceHash][msg.sender] = true;
             paidInvoices[msg.sender].push(_invoiceHash);
+            _payers[_invoiceHash].push(msg.sender);
             inv.payerCount++;
         }
 
-        // Auto-settle: transfer ETH to creator
+        // Track ETH per invoice and per payer
+        _ethHeld[_invoiceHash] += msg.value;
+        _payerEth[_invoiceHash][msg.sender] += msg.value;
+
+        // Auto-settle: transfer escrowed ETH to creator
         if (inv.invoiceType != TYPE_MULTIPAY) {
             inv.status = STATUS_SETTLED;
-            (bool sent, ) = payable(inv.creator).call{value: msg.value}("");
+            uint256 payout = _ethHeld[_invoiceHash];
+            _ethHeld[_invoiceHash] = 0;
+            (bool sent, ) = payable(inv.creator).call{value: payout}("");
             require(sent, "ETH transfer failed");
             emit InvoiceSettled(_invoiceHash);
         }
@@ -190,8 +200,9 @@ contract CipherPayFHE {
         require(inv.invoiceType == TYPE_MULTIPAY, "Not multipay");
 
         inv.status = STATUS_SETTLED;
-        uint256 payout = address(this).balance;
+        uint256 payout = _ethHeld[_invoiceHash];
         if (payout > 0) {
+            _ethHeld[_invoiceHash] = 0;
             (bool sent, ) = payable(inv.creator).call{value: payout}("");
             require(sent, "ETH transfer failed");
         }
@@ -204,6 +215,19 @@ contract CipherPayFHE {
         require(inv.status == STATUS_OPEN, "Not open");
 
         inv.status = STATUS_CANCELLED;
+
+        // Refund all payers
+        address[] storage payers = _payers[_invoiceHash];
+        for (uint256 i = 0; i < payers.length; i++) {
+            uint256 paid = _payerEth[_invoiceHash][payers[i]];
+            if (paid > 0) {
+                _payerEth[_invoiceHash][payers[i]] = 0;
+                (bool sent, ) = payable(payers[i]).call{value: paid}("");
+                require(sent, "Refund failed");
+            }
+        }
+        _ethHeld[_invoiceHash] = 0;
+
         emit InvoiceCancelled(_invoiceHash);
     }
 
