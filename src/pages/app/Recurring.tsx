@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
-import { Repeat, Clock, CheckCircle, Pause, Play, X, AlertTriangle } from 'lucide-react';
+import { Repeat, Clock, CheckCircle, Pause, Play, X, AlertTriangle, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Invoice } from '../../store/useInvoiceStore';
 import { Button } from '../../components/Button';
 import { EncryptedAmount } from '../../components/EncryptedAmount';
 import { useContractStatus } from '../../hooks/useContractStatus';
 import { useInvoices } from '../../hooks/useInvoices';
-import { useWriteContract, usePublicClient } from 'wagmi';
-import { CIPHERPAY_ADDRESS, CIPHERPAY_ABI } from '../../config/contract';
+import { useWriteContract, usePublicClient, useAccount, useReadContract } from 'wagmi';
+import { CIPHERPAY_ADDRESS, CIPHERPAY_ABI, CIPHERPAY_SIMPLE_ADDRESS, SIMPLE_EXTRA_ABI } from '../../config/contract';
 import { useToastStore } from '../../components/ToastContainer';
 
 function CountdownTimer({ targetDate }: { targetDate: string }) {
@@ -39,8 +39,30 @@ export function Recurring() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
   const { addToast } = useToastStore();
+  const { address } = useAccount();
   const [pausedInvoices, setPausedInvoices] = useState<Set<string>>(new Set());
   const [cancelModal, setCancelModal] = useState<string | null>(null);
+  const [claimingHash, setClaimingHash] = useState<string | null>(null);
+
+  const handleClaim = async (hash: string) => {
+    if (!publicClient) return;
+    setClaimingHash(hash);
+    try {
+      addToast('info', 'Claiming recurring payment...');
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS,
+        abi: SIMPLE_EXTRA_ABI as any,
+        functionName: 'claimRecurring',
+        args: [hash as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      addToast('success', 'Payment claimed!');
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Claim failed';
+      addToast('error', msg.includes('User rejected') ? 'Transaction cancelled' : msg.includes('Nothing to claim') ? 'No periods available to claim yet' : msg);
+    }
+    setClaimingHash(null);
+  };
 
   const recurringInvoices = invoices.filter(i => i.type === 'recurring');
   const activeCount = recurringInvoices.filter(i => i.status === 'open' && !pausedInvoices.has(i.hash)).length;
@@ -157,6 +179,14 @@ export function Recurring() {
                     <td className="px-8 py-5">{statusBadge(status)}</td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {status === 'active' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
+                          <Button variant="ghost" size="sm"
+                            onClick={() => handleClaim(invoice.hash)}
+                            disabled={claimingHash === invoice.hash}
+                            className="gap-1 text-primary">
+                            <Download className="w-3.5 h-3.5" /> {claimingHash === invoice.hash ? 'Claiming...' : 'Claim'}
+                          </Button>
+                        )}
                         {status === 'active' && (
                           <Button variant="ghost" size="sm" onClick={() => togglePause(invoice.hash)} className="gap-1 text-yellow-500">
                             <Pause className="w-3.5 h-3.5" /> Pause

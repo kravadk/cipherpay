@@ -64,10 +64,16 @@ export function useInvoices() {
       const invoicePromises = hashes.map(async (hash) => {
         try {
           let data: any[] | null = null;
-          for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {
+          // Try FHE contract (bool hasRecipient) then Simple (address recipient)
+          const simpleGetInvoiceAbi = [{ name: 'getInvoice', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'creator', type: 'address' }, { name: 'recipient', type: 'address' }, { name: 'invoiceType', type: 'uint8' }, { name: 'status', type: 'uint8' }, { name: 'deadline', type: 'uint256' }, { name: 'createdAt', type: 'uint256' }, { name: 'createdBlock', type: 'uint256' }, { name: 'unlockBlock', type: 'uint256' }] }] as const;
+          const contracts = [
+            { address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any },
+            { address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleGetInvoiceAbi as any },
+          ];
+          for (const c of contracts) {
             try {
               const result = await publicClient.readContract({
-                address: contractAddr, abi: CIPHERPAY_ABI as any,
+                address: c.address, abi: c.abi,
                 functionName: 'getInvoice', args: [hash],
               }) as unknown as any[];
               if ((result[0] as string) !== '0x0000000000000000000000000000000000000000') {
@@ -79,7 +85,9 @@ export function useInvoices() {
           if (!data) return null;
 
           const creator = data[0] as string;
-          const recipient = data[1] as string;
+          const secondField = data[1];
+          const isFheFormat = typeof secondField === 'boolean';
+          const recipient = isFheFormat ? '0x0000000000000000000000000000000000000000' : (data[1] as string);
           const invoiceType = Number(data[2]);
           const status = Number(data[3]);
           const deadline = Number(data[4]);
@@ -104,11 +112,12 @@ export function useInvoices() {
           } catch {
             // Might be Simple contract — try plaintext
             try {
+              const simpleAmountAbi = [{ name: 'getInvoiceAmount', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: '', type: 'uint256' }] }] as const;
               const amountRaw = await publicClient.readContract({
-                address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+                address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleAmountAbi as any,
                 functionName: 'getInvoiceAmount', args: [hash],
               }) as bigint;
-              amountStr = formatEther(amountRaw);
+              if (amountRaw > 0n) amountStr = formatEther(amountRaw);
             } catch {}
           }
 

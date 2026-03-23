@@ -5,7 +5,7 @@ import { Button } from '../../components/Button';
 import { useInvoiceStore } from '../../store/useInvoiceStore';
 import type { Invoice } from '../../store/useInvoiceStore';
 import { useAccount, useBalance, useWriteContract, usePublicClient } from 'wagmi';
-import { CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ABI } from '../../config/contract';
+import { CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS, CIPHERPAY_ABI, SIMPLE_EXTRA_ABI } from '../../config/contract';
 import { EncryptedAmount } from '../../components/EncryptedAmount';
 import { Link, useNavigate } from 'react-router-dom';
 import { CipherScramble } from '../../components/CipherScramble';
@@ -44,6 +44,7 @@ export function Dashboard() {
   const { isReady: isFheReady, isConnecting: isFheConnecting } = useCofhe();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'sender' | 'receiver' | 'recurring' | 'batch'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'settled' | 'cancelled'>('all');
   const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
   const [drawerInvoice, setDrawerInvoice] = useState<Invoice | null>(null);
   const [privateRevealed, setPrivateRevealed] = useState(false);
@@ -63,11 +64,13 @@ export function Dashboard() {
   ];
 
   const filteredInvoices = invoices.filter(invoice => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'sender') return invoice.creator?.toLowerCase() === address?.toLowerCase();
-    if (activeTab === 'receiver') return invoice.creator?.toLowerCase() !== address?.toLowerCase();
-    if (activeTab === 'recurring') return invoice.type === 'recurring';
-    if (activeTab === 'batch') return invoice.type === 'batch';
+    // Role filter
+    if (activeTab === 'sender' && invoice.creator?.toLowerCase() !== address?.toLowerCase()) return false;
+    if (activeTab === 'receiver' && invoice.creator?.toLowerCase() === address?.toLowerCase()) return false;
+    if (activeTab === 'recurring' && invoice.type !== 'recurring') return false;
+    if (activeTab === 'batch' && invoice.type !== 'batch') return false;
+    // Status filter
+    if (statusFilter !== 'all' && invoice.status !== statusFilter) return false;
     return true;
   }).slice(0, 10);
 
@@ -177,6 +180,25 @@ export function Dashboard() {
     }
   };
 
+  const handleClaimRecurring = async (hash: string) => {
+    if (!publicClient) return;
+    try {
+      addToast('info', 'Claiming recurring payment...');
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS,
+        abi: SIMPLE_EXTRA_ABI as any,
+        functionName: 'claimRecurring',
+        args: [hash as `0x${string}`],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      addToast('success', 'Payment claimed!');
+      refetchInvoices();
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Claim failed';
+      addToast('error', msg.includes('User rejected') ? 'Transaction cancelled' : msg.includes('Nothing to claim') ? 'No periods available yet' : msg);
+    }
+  };
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'settled': return <CheckCircle className="w-4 h-4 text-primary" />;
@@ -246,41 +268,7 @@ export function Dashboard() {
         </Link>
       </div>
 
-      {/* Balance Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Public Balance */}
-        <div className="bg-surface-1 border border-border-default rounded-[32px] p-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Public Balance</p>
-            <button
-              onClick={handleRefreshBalance}
-              className="p-2 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-secondary transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshingBalance ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold text-primary">{balanceData ? Number((balanceData as any).formatted ?? '0').toFixed(4) : '0.00'}</span>
-            <span className="text-xl font-bold text-text-secondary mb-1">{balanceData?.symbol || 'ETH'}</span>
-          </div>
-        </div>
-
-        {/* Private Balance */}
-        <div className="bg-surface-1 border border-border-default rounded-[32px] p-8 space-y-4 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Private Balance</p>
-          <div className="flex items-center justify-between relative">
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold tracking-widest text-text-muted">• • • • • •</span>
-              <span className="text-xl font-bold text-text-secondary mb-1">FHE</span>
-            </div>
-            <span className="text-[10px] text-text-dim uppercase tracking-widest">Requires FHERC20</span>
-          </div>
-          <p className="text-[10px] text-text-dim">Private balance will be available when FHERC20 token is deployed (Wave 3)</p>
-        </div>
-      </div>
-
-      {/* end balance row */}
+      {/* Balance removed — shown in sidebar */}
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -288,7 +276,7 @@ export function Dashboard() {
           <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
             className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-3 hover:border-primary/20 transition-colors">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{stat.label}</p>
+              <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{stat.label}</p>
               {i === 0 && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
             </div>
             <div className="flex items-baseline gap-2">
@@ -301,7 +289,7 @@ export function Dashboard() {
               )}
             </div>
             {(stat as any).trend && (
-              <p className="text-[10px] text-text-dim">{(stat as any).trend}</p>
+              <p className="text-[10px] text-text-secondary">{(stat as any).trend}</p>
             )}
             {/* Mini progress bar for settle rate */}
             {stat.label === 'Settled' && totalCount > 0 && (
@@ -346,19 +334,36 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-          {(['all', 'sender', 'receiver', 'recurring', 'batch'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeTab === tab ? 'bg-primary text-black' : 'bg-surface-1 text-text-secondary border border-border-default hover:border-primary/40'
-              }`}
-            >
-              {tab === 'all' ? 'All' : tab === 'sender' ? 'As Sender' : tab === 'receiver' ? 'As Receiver' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-6">
+          {/* Role filter */}
+          <div className="flex items-center gap-1.5 bg-surface-1 border border-border-default rounded-xl p-1">
+            {(['all', 'sender', 'receiver'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  activeTab === tab ? 'bg-primary text-black' : 'text-text-secondary hover:text-white hover:bg-surface-2'
+                }`}
+              >
+                {tab === 'all' ? 'All' : tab === 'sender' ? 'Sent' : 'Received'}
+              </button>
+            ))}
+          </div>
+          {/* Status filter */}
+          <div className="flex items-center gap-1.5 bg-surface-1 border border-border-default rounded-xl p-1">
+            {(['all', 'open', 'settled', 'cancelled'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  statusFilter === status ? 'bg-primary text-black' : 'text-text-secondary hover:text-white hover:bg-surface-2'
+                }`}
+              >
+                {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
+          </div>
         </div>
 
         <div className="bg-surface-1 border border-border-default rounded-[32px] overflow-hidden">
@@ -411,6 +416,10 @@ export function Dashboard() {
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => setDrawerInvoice(invoice)}>View</Button>
+                        {/* Claim — recurring creator */}
+                        {invoice.status === 'open' && invoice.type === 'recurring' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
+                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleClaimRecurring(invoice.hash)}>Claim</Button>
+                        )}
                         {/* Settle — only for multi-pay creator */}
                         {invoice.status === 'open' && invoice.type === 'multi-pay' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
                           <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleSettle(invoice.hash)}>Settle</Button>

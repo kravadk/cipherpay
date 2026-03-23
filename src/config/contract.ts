@@ -1,8 +1,8 @@
 // Simple contract (plaintext amounts — MVP fallback)
-export const CIPHERPAY_SIMPLE_ADDRESS = '0x28994f265d07189dE3098eda3DB7dd16E15c9419' as const;
+export const CIPHERPAY_SIMPLE_ADDRESS = '0xF3A15EC0FAE753D6BEC3AAB3aEB2d72824c0713F' as const;
 
 // FHE contract (encrypted amounts via Fhenix CoFHE)
-export const CIPHERPAY_FHE_ADDRESS = '0xB86C10A9FeeD61d525A94B5E6a12409a697ac592' as const;
+export const CIPHERPAY_FHE_ADDRESS = '0x11B9d10bc7Cf5970dE860D8d52674329b7A791C4' as const;
 
 // Module contracts
 export const PAYMENT_PROOF_ADDRESS = '0x54C22cdF7B65E64C75EeEF565E775503C7657293' as const;
@@ -23,15 +23,27 @@ const InEuint64Tuple = {
   ],
 } as const;
 
+// InEaddress tuple type for FHE encrypted addresses
+const InEaddressTuple = {
+  type: 'tuple',
+  components: [
+    { name: 'ctHash', type: 'uint256' },
+    { name: 'securityZone', type: 'uint8' },
+    { name: 'utype', type: 'uint8' },
+    { name: 'signature', type: 'bytes' },
+  ],
+} as const;
+
 export const CIPHERPAY_ABI = [
-  // Create invoice with FHE-encrypted amount
+  // Create invoice with FHE-encrypted amount and encrypted recipient
   {
     name: 'createInvoice',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [
       { name: '_encryptedAmount', ...InEuint64Tuple },
-      { name: '_recipient', type: 'address' },
+      { name: '_encryptedRecipient', ...InEaddressTuple },
+      { name: '_hasRecipient', type: 'bool' },
       { name: '_invoiceType', type: 'uint8' },
       { name: '_deadline', type: 'uint256' },
       { name: '_unlockBlock', type: 'uint256' },
@@ -40,11 +52,11 @@ export const CIPHERPAY_ABI = [
     ],
     outputs: [{ name: '', type: 'bytes32' }],
   },
-  // Pay invoice with FHE-encrypted payment amount
+  // Pay invoice with FHE-encrypted payment + ETH
   {
     name: 'payInvoice',
     type: 'function',
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     inputs: [
       { name: '_invoiceHash', type: 'bytes32' },
       { name: '_encryptedPayment', ...InEuint64Tuple },
@@ -75,7 +87,7 @@ export const CIPHERPAY_ABI = [
     inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
     outputs: [
       { name: 'creator', type: 'address' },
-      { name: 'recipient', type: 'address' },
+      { name: 'hasRecipient', type: 'bool' },
       { name: 'invoiceType', type: 'uint8' },
       { name: 'status', type: 'uint8' },
       { name: 'deadline', type: 'uint256' },
@@ -169,7 +181,7 @@ export const CIPHERPAY_ABI = [
       { name: 'invoiceHash', type: 'bytes32', indexed: true },
       { name: 'creator', type: 'address', indexed: true },
       { name: 'invoiceType', type: 'uint8', indexed: false },
-      { name: 'recipient', type: 'address', indexed: false },
+      { name: 'hasRecipient', type: 'bool', indexed: false },
       { name: 'deadline', type: 'uint256', indexed: false },
       { name: 'unlockBlock', type: 'uint256', indexed: false },
       { name: 'memo', type: 'string', indexed: false },
@@ -204,6 +216,13 @@ export const SIMPLE_EXTRA_ABI = [
   { name: 'getInvoiceCollected', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'collected', type: 'uint256' }, { name: 'target', type: 'uint256' }, { name: 'payerCount', type: 'uint256' }] },
   { name: 'payInvoice', type: 'function', stateMutability: 'payable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_paymentAmount', type: 'uint256' }], outputs: [] },
   { name: 'payInvoiceFull', type: 'function', stateMutability: 'payable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] },
+  // Recurring escrow
+  { name: 'depositRecurring', type: 'function', stateMutability: 'payable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_intervalSeconds', type: 'uint256' }, { name: '_totalPeriods', type: 'uint256' }], outputs: [] },
+  { name: 'claimRecurring', type: 'function', stateMutability: 'nonpayable', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [] },
+  { name: 'getRecurringSchedule', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'intervalSeconds', type: 'uint256' }, { name: 'totalPeriods', type: 'uint256' }, { name: 'claimedPeriods', type: 'uint256' }, { name: 'startTimestamp', type: 'uint256' }, { name: 'perPeriodAmount', type: 'uint256' }, { name: 'claimableNow', type: 'uint256' }] },
+  // Events
+  { name: 'RecurringDeposited', type: 'event', inputs: [{ name: 'invoiceHash', type: 'bytes32', indexed: true }, { name: 'payer', type: 'address', indexed: true }, { name: 'totalAmount', type: 'uint256', indexed: false }, { name: 'periods', type: 'uint256', indexed: false }, { name: 'interval', type: 'uint256', indexed: false }] },
+  { name: 'RecurringClaimed', type: 'event', inputs: [{ name: 'invoiceHash', type: 'bytes32', indexed: true }, { name: 'creator', type: 'address', indexed: true }, { name: 'amount', type: 'uint256', indexed: false }, { name: 'periodsClaimedSoFar', type: 'uint256', indexed: false }] },
 ] as const;
 
 export const INVOICE_TYPE_MAP: Record<number, string> = {

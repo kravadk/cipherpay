@@ -21,11 +21,20 @@ contract CipherPaySimple {
         string  memo;
     }
 
+    // Recurring schedule
+    struct RecurringSchedule {
+        uint256 intervalSeconds;   // e.g. 30 days = 2592000
+        uint256 totalPeriods;      // e.g. 6 months
+        uint256 claimedPeriods;    // how many creator already claimed
+        uint256 startTimestamp;    // when payer deposited (escrow starts)
+    }
+
     mapping(bytes32 => Invoice) private _invoices;
     mapping(address => bytes32[]) private _userInvoices;
     mapping(address => bytes32[]) private _payerInvoices;
     mapping(bytes32 => mapping(address => uint256)) public paymentAmounts;
     mapping(bytes32 => address[]) private _payers;
+    mapping(bytes32 => RecurringSchedule) private _recurring;
 
     event InvoiceCreated(
         bytes32 indexed invoiceHash, address indexed creator,
@@ -35,6 +44,8 @@ contract CipherPaySimple {
     event InvoicePaid(bytes32 indexed invoiceHash, address indexed payer, uint256 amount, uint256 totalCollected);
     event InvoiceSettled(bytes32 indexed invoiceHash);
     event InvoiceCancelled(bytes32 indexed invoiceHash);
+    event RecurringDeposited(bytes32 indexed invoiceHash, address indexed payer, uint256 totalAmount, uint256 periods, uint256 interval);
+    event RecurringClaimed(bytes32 indexed invoiceHash, address indexed creator, uint256 amount, uint256 periodsClaimedSoFar);
 
     /**
      * @notice Create an invoice. For vesting (type=3): creator sends ETH upfront as escrow.
@@ -69,6 +80,115 @@ contract CipherPaySimple {
         return invoiceHash;
     }
 
+    // ── Recurring: escrow + periodic claims ──────────────────
+
+    /**
+     * @notice Payer deposits full amount into escrow for recurring invoice.
+     * @param _invoiceHash The recurring invoice hash
+     * @param _intervalSeconds Time between each claim (e.g. 2592000 = 30 days)
+     * @param _totalPeriods Number of periods (amount / periods = per-period payout)
+     */
+    function depositRecurring(
+        bytes32 _invoiceHash,
+        uint256 _intervalSeconds,
+        uint256 _totalPeriods
+    ) external payable {
+        Invoice storage inv = _invoices[_invoiceHash];
+        require(inv.creator != address(0), "Invoice not found");
+        require(inv.invoiceType == 2, "Not recurring");
+        require(inv.status == 0, "Not open");
+        require(_totalPeriods > 0, "At least 1 period");
+        require(_intervalSeconds >= 1 hours, "Interval too short");
+        require(msg.value == inv.amount, "Must deposit exact amount");
+        require(_recurring[_invoiceHash].startTimestamp == 0, "Already deposited");
+        if (inv.recipient != address(0)) require(msg.sender == inv.recipient, "Not authorized");
+
+        _recurring[_invoiceHash] = RecurringSchedule({
+            intervalSeconds: _intervalSeconds,
+            totalPeriods: _totalPeriods,
+            claimedPeriods: 0,
+            startTimestamp: block.timestamp
+        });
+
+        inv.collected = msg.value;
+
+        if (paymentAmounts[_invoiceHash][msg.sender] == 0) {
+            _payers[_invoiceHash].push(msg.sender);
+            _payerInvoices[msg.sender].push(_invoiceHash);
+            inv.payerCount++;
+        }
+        paymentAmounts[_invoiceHash][msg.sender] += msg.value;
+
+        emit RecurringDeposited(_invoiceHash, msg.sender, msg.value, _totalPeriods, _intervalSeconds);
+    }
+
+    /**
+     * @notice Creator claims all available unlocked periods.
+     *         Transfers (unlockedPeriods - claimedPeriods) * (amount / totalPeriods) to creator.
+     */
+    function claimRecurring(bytes32 _invoiceHash) external {
+        Invoice storage inv = _invoices[_invoiceHash];
+        require(inv.creator != address(0), "Invoice not found");
+        require(inv.invoiceType == 2, "Not recurring");
+        require(inv.status == 0, "Not open");
+        require(msg.sender == inv.creator, "Only creator");
+
+        RecurringSchedule storage sched = _recurring[_invoiceHash];
+        require(sched.startTimestamp > 0, "Not deposited yet");
+
+        uint256 elapsed = block.timestamp - sched.startTimestamp;
+        uint256 unlockedPeriods = elapsed / sched.intervalSeconds;
+        if (unlockedPeriods > sched.totalPeriods) {
+            unlockedPeriods = sched.totalPeriods;
+        }
+
+        uint256 claimable = unlockedPeriods - sched.claimedPeriods;
+        require(claimable > 0, "Nothing to claim yet");
+
+        uint256 perPeriod = inv.amount / sched.totalPeriods;
+        uint256 payout;
+
+        // Last claim gets remainder (handles rounding)
+        if (unlockedPeriods == sched.totalPeriods) {
+            payout = inv.amount - (sched.claimedPeriods * perPeriod);
+        } else {
+            payout = claimable * perPeriod;
+        }
+
+        sched.claimedPeriods = unlockedPeriods;
+
+        // Settle when all periods claimed
+        if (sched.claimedPeriods == sched.totalPeriods) {
+            inv.status = 1;
+            emit InvoiceSettled(_invoiceHash);
+        }
+
+        (bool sent, ) = payable(inv.creator).call{value: payout}("");
+        require(sent, "ETH transfer failed");
+
+        emit RecurringClaimed(_invoiceHash, inv.creator, payout, sched.claimedPeriods);
+    }
+
+    /**
+     * @notice View recurring schedule
+     */
+    function getRecurringSchedule(bytes32 _invoiceHash) external view returns (
+        uint256 intervalSeconds, uint256 totalPeriods, uint256 claimedPeriods,
+        uint256 startTimestamp, uint256 perPeriodAmount, uint256 claimableNow
+    ) {
+        RecurringSchedule storage sched = _recurring[_invoiceHash];
+        Invoice storage inv = _invoices[_invoiceHash];
+        uint256 perPeriod = sched.totalPeriods > 0 ? inv.amount / sched.totalPeriods : 0;
+        uint256 unlocked = 0;
+        uint256 claimable = 0;
+        if (sched.startTimestamp > 0) {
+            unlocked = (block.timestamp - sched.startTimestamp) / sched.intervalSeconds;
+            if (unlocked > sched.totalPeriods) unlocked = sched.totalPeriods;
+            claimable = unlocked - sched.claimedPeriods;
+        }
+        return (sched.intervalSeconds, sched.totalPeriods, sched.claimedPeriods, sched.startTimestamp, perPeriod, claimable);
+    }
+
     /**
      * @notice Claim vesting funds — only recipient, only after unlock block.
      */
@@ -96,6 +216,7 @@ contract CipherPaySimple {
         require(inv.creator != address(0), "Invoice not found");
         require(inv.status == 0, "Not open");
         require(inv.invoiceType != 3, "Vesting: use claimVesting instead");
+        require(inv.invoiceType != 2, "Recurring: use depositRecurring instead");
         require(_paymentAmount > 0, "Amount must be > 0");
         require(msg.value == _paymentAmount, "ETH sent must match payment amount");
         if (inv.deadline > 0) require(block.timestamp <= inv.deadline, "Deadline passed");

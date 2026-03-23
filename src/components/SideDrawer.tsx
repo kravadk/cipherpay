@@ -110,7 +110,7 @@ export function SideDrawer({ isOpen, onClose, invoice }: { isOpen: boolean; onCl
                 {/* Footer info — block, small */}
                 <div className="flex items-center justify-between text-[10px] text-text-dim px-1">
                   <span>Block #{invoice.blockNumber}</span>
-                  <a href={`${FHENIX_EXPLORER_URL}/address/${CIPHERPAY_FHE_ADDRESS}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`${FHENIX_EXPLORER_URL}/block/${invoice.blockNumber}`} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1 hover:text-primary transition-colors">
                     Etherscan <ExternalLink className="w-2.5 h-2.5" />
                   </a>
@@ -123,7 +123,7 @@ export function SideDrawer({ isOpen, onClose, invoice }: { isOpen: boolean; onCl
                     <Link2 className="w-4 h-4 text-text-muted group-hover:text-primary" />
                     <span className="text-sm text-text-secondary group-hover:text-white">Copy Payment Link</span>
                   </button>
-                  <a href={`${FHENIX_EXPLORER_URL}/tx/${invoice.hash}`} target="_blank" rel="noopener noreferrer"
+                  <a href={`${FHENIX_EXPLORER_URL}/block/${invoice.blockNumber}`} target="_blank" rel="noopener noreferrer"
                     className="w-full flex items-center gap-3 p-3.5 bg-surface-2 border border-border-default rounded-xl hover:border-primary/30 transition-colors group">
                     <ExternalLink className="w-4 h-4 text-text-muted group-hover:text-primary" />
                     <span className="text-sm text-text-secondary group-hover:text-white">View on Etherscan</span>

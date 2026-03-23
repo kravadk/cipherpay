@@ -20,10 +20,36 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { useAccount, useDisconnect } from 'wagmi';
+import { useAccount, useDisconnect, useBalance } from 'wagmi';
+import { RefreshCw } from 'lucide-react';
 import { useWalletStore } from '../store/useInvoiceStore';
-import { useCofhe } from '../hooks/useCofhe';
 import { useNotifications } from '../hooks/useNotifications';
+
+function BalanceDisplay() {
+  const { address } = useAccount();
+  const { data: balanceData, refetch } = useBalance({ address });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const formatted = balanceData ? (Number(balanceData.value) / 10 ** balanceData.decimals).toFixed(4) : '0.00';
+
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5 bg-surface-2 rounded-xl border border-border-default">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-bold text-primary">{formatted}</span>
+        <span className="text-xs text-text-muted">{balanceData?.symbol || 'ETH'}</span>
+      </div>
+      <button onClick={handleRefresh} className="p-1 rounded-lg hover:bg-surface-3 text-text-muted hover:text-primary transition-colors">
+        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+      </button>
+    </div>
+  );
+}
 
 interface SidebarItemProps {
   icon: any;
@@ -121,29 +147,18 @@ export function AppSidebar() {
   const { address } = useAccount();
   const { disconnect } = useDisconnect();
   const { permitActive, permitExpiry } = useWalletStore();
-  const { isReady: isFheReady, isConnecting: isFheConnecting } = useCofhe();
   const { unreadCount } = useNotifications();
 
   return (
     <aside className="w-64 h-screen bg-bg-base border-r border-border-default flex flex-col z-[10001]">
-      <div className="p-6">
-        <Link to="/" className="flex items-center gap-2 mb-2">
+      <div className="px-6 pt-4 pb-2">
+        <Link to="/" className="flex items-center gap-2">
           <img src="/logo.png" alt="CipherPay" className="w-8 h-8 rounded-lg" />
           <span className="text-xl font-bold text-white tracking-tight">CipherPay</span>
         </Link>
-        <div className="flex items-center gap-2 px-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Ethereum Sepolia</span>
-        </div>
-        <div className="flex items-center gap-2 px-2 mt-1">
-          <div className={`w-1.5 h-1.5 rounded-full ${isFheReady ? 'bg-blue-500 animate-pulse' : isFheConnecting ? 'bg-yellow-500 animate-pulse' : 'bg-text-dim'}`} />
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${isFheReady ? 'text-blue-400' : isFheConnecting ? 'text-yellow-500' : 'text-text-dim'}`}>
-            {isFheReady ? 'FHE Ready' : isFheConnecting ? 'FHE Loading...' : 'FHE Standby'}
-          </span>
-        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 space-y-6 py-4">
+      <div className="flex-1 overflow-y-auto px-4 space-y-6 py-2">
         <SidebarSection label="Main">
           <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/app/dashboard" isActive={location.pathname === '/app/dashboard'} />
           <SidebarItem icon={Plus} label="New Cipher" path="/app/new-cipher" isActive={location.pathname === '/app/new-cipher'} badge="NEW" badgeColor="bg-primary text-black" />
@@ -172,6 +187,8 @@ export function AppSidebar() {
       </div>
 
       <div className="p-4 border-t border-border-default space-y-4">
+        <BalanceDisplay />
+
         {permitActive ? (
           <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-xl" title={`Signed permit expires ${permitExpiry ? new Date(permitExpiry).toLocaleString('en-US') : 'N/A'}`}>
             <div className="w-1.5 h-1.5 rounded-full bg-primary" />

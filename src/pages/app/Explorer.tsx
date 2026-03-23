@@ -343,7 +343,7 @@ export function Explorer() {
                   </Button>
                   <a href={`${FHENIX_EXPLORER_URL}/block/${selectedInvoice.blockNumber}`} target="_blank" rel="noopener noreferrer">
                     <Button variant="ghost" size="sm" className="w-full gap-2">
-                      <ExternalLink className="w-4 h-4" /> View on Fhenix Explorer
+                      <ExternalLink className="w-4 h-4" /> View on Etherscan
                     </Button>
                   </a>
                   {/* Pay — only if open AND not creator */}

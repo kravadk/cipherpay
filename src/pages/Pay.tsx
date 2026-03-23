@@ -57,19 +57,23 @@ export function Pay() {
         let data: any[] | null = null;
         let activeContract = CIPHERPAY_ADDRESS;
 
-        for (const contractAddr of [CIPHERPAY_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS]) {
+        const simpleGetInvoiceAbi = [{ name: 'getInvoice', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'creator', type: 'address' }, { name: 'recipient', type: 'address' }, { name: 'invoiceType', type: 'uint8' }, { name: 'status', type: 'uint8' }, { name: 'deadline', type: 'uint256' }, { name: 'createdAt', type: 'uint256' }, { name: 'createdBlock', type: 'uint256' }, { name: 'unlockBlock', type: 'uint256' }] }] as const;
+        const contracts = [
+          { address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any },
+          { address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleGetInvoiceAbi as any },
+        ];
+        for (const c of contracts) {
           try {
             const result = await publicClient!.readContract({
-              address: contractAddr,
-              abi: CIPHERPAY_ABI as any,
+              address: c.address, abi: c.abi,
               functionName: 'getInvoice',
               args: [hash as `0x${string}`],
             }) as unknown as any[];
             const creator = result[0] as string;
             if (creator !== '0x0000000000000000000000000000000000000000') {
               data = result;
-              activeContract = contractAddr;
-              setInvoiceContract(contractAddr);
+              activeContract = c.address;
+              setInvoiceContract(c.address);
               break;
             }
           } catch { /* try next contract */ }
@@ -82,9 +86,14 @@ export function Pay() {
 
         const creator = data[0] as string;
 
+        // FHE contract returns (address, bool, uint8, uint8, ...)
+        // Simple contract returns (address, address, uint8, uint8, ...)
+        const secondField = data[1];
+        const isFheFormat = typeof secondField === 'boolean';
         const invoiceData = {
           creator,
-          recipient: data[1] as string,
+          recipient: isFheFormat ? '0x0000000000000000000000000000000000000000' : (data[1] as string),
+          hasRecipient: isFheFormat ? secondField : (data[1] as string) !== '0x0000000000000000000000000000000000000000',
           invoiceType: Number(data[2]),
           status: Number(data[3]),
           deadline: BigInt(data[4] || 0),
@@ -244,33 +253,11 @@ export function Pay() {
       const amountWei = parseEther(amountToPay);
       addLog(`> Payment: ${amountToPay} ETH`);
 
-      // Try FHE encryption first
-      let encryptedPayment: any = null;
-      let useFhe = false;
-
-      if (isFheReady) {
-        addLog('> Encrypting payment with FHE...');
-        try {
-          const Encryptable = getEncryptable();
-          if (Encryptable) {
-            const [encrypted] = await encrypt([Encryptable.uint64(amountWei)]);
-            encryptedPayment = encrypted;
-            useFhe = true;
-            addLog('> ✓ Payment encrypted');
-          }
-        } catch (fheErr: any) {
-          addLog(`> ⚠ FHE: ${fheErr.message?.slice(0, 50) || 'encryption failed'}`);
-        }
-      }
-
       let tx: `0x${string}`;
-
-      // Pay on the same contract where invoice was created
       const isSimpleInvoice = invoiceContract === CIPHERPAY_SIMPLE_ADDRESS;
 
       if (isSimpleInvoice) {
-        // Simple contract: send real ETH (payable)
-        addLog(`> Sending ${amountToPay} ETH to invoice creator...`);
+        addLog(`> Sending ${amountToPay} ETH...`);
         const simplePayAbi = [{
           name: 'payInvoice', type: 'function', stateMutability: 'payable',
           inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_paymentAmount', type: 'uint256' }],
@@ -283,23 +270,40 @@ export function Pay() {
           value: amountWei,
         } as any);
       } else {
-        // FHE contract: send encrypted payment (no ETH value — amounts are on-chain ciphertext)
-        if (useFhe && encryptedPayment) {
-          addLog('> Submitting FHE-encrypted payment...');
-          const encTuple = {
-            ctHash: BigInt(encryptedPayment.ctHash || encryptedPayment.data?.ctHash || 0),
-            securityZone: encryptedPayment.securityZone ?? encryptedPayment.data?.securityZone ?? 0,
-            utype: encryptedPayment.utype ?? encryptedPayment.data?.utype ?? 5,
-            signature: encryptedPayment.signature ?? encryptedPayment.data?.signature ?? '0x',
-          };
-          tx = await writeContractAsync({
-            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-            functionName: 'payInvoice',
-            args: [hash as `0x${string}`, encTuple],
-          });
-        } else {
-          throw new Error('FHE encryption required for this invoice but SDK not ready');
+        // Encrypt payment with FHE
+        addLog('> Encrypting payment with FHE...');
+        let encryptedPayment: any = null;
+
+        if (isFheReady) {
+          try {
+            const Encryptable = getEncryptable();
+            if (Encryptable) {
+              const [encrypted] = await encrypt([Encryptable.uint64(amountWei)]);
+              encryptedPayment = encrypted;
+              addLog('> ✓ Payment encrypted');
+            }
+          } catch (fheErr: any) {
+            addLog(`> ⚠ FHE: ${fheErr.message?.slice(0, 50) || 'encryption failed'}`);
+          }
         }
+
+        if (!encryptedPayment) {
+          throw new Error('Encryption service not ready. Please wait and try again.');
+        }
+
+        addLog(`> Sending ${amountToPay} ETH to contract...`);
+        const encTuple = {
+          ctHash: BigInt(encryptedPayment.ctHash || encryptedPayment.data?.ctHash || 0),
+          securityZone: encryptedPayment.securityZone ?? encryptedPayment.data?.securityZone ?? 0,
+          utype: encryptedPayment.utype ?? encryptedPayment.data?.utype ?? 5,
+          signature: encryptedPayment.signature ?? encryptedPayment.data?.signature ?? '0x',
+        };
+        tx = await writeContractAsync({
+          address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+          functionName: 'payInvoice',
+          args: [hash as `0x${string}`, encTuple],
+          value: amountWei,
+        } as any);
       }
 
       addLog(`> Transaction: ${tx.slice(0, 14)}...`);
@@ -319,6 +323,7 @@ export function Pay() {
       else if (msg.includes('not open') || msg.includes('Not open')) userMsg = 'This invoice is no longer open.';
       else if (msg.includes('Deadline passed')) userMsg = 'The deadline has passed.';
       else if (msg.includes('Still locked')) userMsg = 'This invoice is still locked (vesting).';
+      else if (msg.includes('Insufficient balance')) userMsg = 'Insufficient balance — deposit ETH first.';
       else if (msg.includes('insufficient funds')) userMsg = 'Insufficient ETH for gas.';
       else if (msg.includes('reverted')) userMsg = 'Transaction reverted.';
       addLog(`> ✗ ${userMsg}`);
@@ -502,9 +507,9 @@ export function Pay() {
                           <Button
                             className="w-full h-14 text-lg"
                             onClick={() => handlePay(invoiceAmount)}
-                            disabled={!isAuthorizedPayer}
+                            disabled={!isAuthorizedPayer || isCreator}
                           >
-                            {!isAuthorizedPayer ? 'Not Authorized' : `Pay ${invoiceAmount} ETH →`}
+                            {isCreator ? 'You are the creator' : !isAuthorizedPayer ? 'Not Authorized' : `Pay ${invoiceAmount} ETH →`}
                           </Button>
                         )}
 
@@ -562,8 +567,9 @@ export function Pay() {
                         </Button>
                       ) : (isMultiPay || !invoiceAmount || parseFloat(invoiceAmount) <= 0) ? (
                         <Button className="w-full h-14 text-lg" onClick={() => handlePay()}
-                          disabled={!isAuthorizedPayer || !payAmount || parseFloat(payAmount) <= 0}>
-                          {!isAuthorizedPayer ? 'Not Authorized'
+                          disabled={!isAuthorizedPayer || isCreator || !payAmount || parseFloat(payAmount) <= 0}>
+                          {isCreator ? 'You are the creator'
+                            : !isAuthorizedPayer ? 'Not Authorized'
                             : isMultiPay ? `Contribute ${payAmount || '...'} ETH →`
                             : `Pay ${payAmount || '...'} ETH →`}
                         </Button>

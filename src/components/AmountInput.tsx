@@ -76,18 +76,20 @@ export function AmountInput({ value, onChange, label = 'Amount', placeholder = '
           />
         )}
 
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
           <button
             type="button"
             onClick={toggleMode}
-            className="p-1.5 rounded-lg hover:bg-surface-3 text-text-muted hover:text-primary transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+              inputMode === 'usd'
+                ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                : 'bg-surface-3 border-border-default text-text-muted hover:border-primary/30 hover:text-primary'
+            }`}
             title={`Switch to ${inputMode === 'eth' ? 'USD' : 'ETH'}`}
           >
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-          </button>
-          <span className={`text-sm font-bold min-w-[36px] text-right ${inputMode === 'eth' ? 'text-text-muted' : 'text-green-400'}`}>
+            <ArrowRightLeft className="w-3 h-3" />
             {inputMode === 'eth' ? 'ETH' : 'USD'}
-          </span>
+          </button>
         </div>
       </div>
 

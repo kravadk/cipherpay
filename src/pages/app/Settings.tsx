@@ -105,7 +105,7 @@ export function Settings() {
               </span>
               <span className="text-xs text-text-muted">•</span>
               <span className="text-xs text-primary font-bold">
-                {balanceData ? `${Number((balanceData as any).formatted ?? '0').toFixed(4)} ${balanceData.symbol}` : '...'}
+                {balanceData ? `${(Number(balanceData.value) / 10 ** balanceData.decimals).toFixed(4)} ${balanceData.symbol}` : '...'}
               </span>
             </div>
           </div>

@@ -14,69 +14,63 @@ export function useCofhe() {
   const clientRef = useRef<any>(null);
   const sdkRef = useRef<any>(null);
 
-  useEffect(() => {
-    if (!walletClient || !publicClient) return;
-    let cancelled = false;
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
-    async function initCofhe() {
-      setIsConnecting(true);
-      setError(null);
+  const initCofhe = useCallback(async (wc: any, pc: any, cancelled: { value: boolean }) => {
+    setIsConnecting(true);
+    setError(null);
 
-      try {
-        // Import SDK modules
-        const webSdk = await import('@cofhe/sdk/web');
-        const coreSdk = await import('@cofhe/sdk');
-        const adaptersMod = await import('@cofhe/sdk/adapters');
+    try {
+      const webSdk = await import('@cofhe/sdk/web');
+      const coreSdk = await import('@cofhe/sdk');
 
-        sdkRef.current = coreSdk;
+      sdkRef.current = coreSdk;
 
-        const { createCofheConfig, createCofheClient } = webSdk;
-        // Handle both ESM default and named exports
-        const WagmiAdapter = adaptersMod.WagmiAdapter || (adaptersMod as any).default?.WagmiAdapter;
+      const { createCofheConfig, createCofheClient } = webSdk;
 
-        // Import chains with CoFHE URL configured
-        const { sepolia: sepoliaChain } = await import('@cofhe/sdk/chains');
+      const { sepolia: sepoliaChain } = await import('@cofhe/sdk/chains');
 
-        // Create config — use the full chain object from SDK (includes coFheUrl, verifierUrl, thresholdNetworkUrl)
-        const config = createCofheConfig({
-          supportedChains: [sepoliaChain],
-          useWorkers: typeof SharedArrayBuffer !== 'undefined',
-        });
+      const config = createCofheConfig({
+        supportedChains: [sepoliaChain],
+        useWorkers: typeof SharedArrayBuffer !== 'undefined',
+      });
 
-        // Create client
-        const client = createCofheClient(config);
+      const client = createCofheClient(config);
 
-        // Connect — WagmiAdapter is an async function (not a class), takes (walletClient, publicClient)
-        if (WagmiAdapter && typeof WagmiAdapter === 'function') {
-          try {
-            const adapter = await WagmiAdapter(walletClient as any, publicClient as any);
-            await client.connect(publicClient as any, adapter as any);
-          } catch (adapterErr: any) {
-            console.warn('[CipherPay] WagmiAdapter failed, trying direct connect:', adapterErr.message);
-            await client.connect(publicClient as any, walletClient as any);
-          }
+      // connect(publicClient, walletClient) — wagmi clients are already viem-compatible
+      await client.connect(pc as any, wc as any);
+
+      if (!cancelled.value) {
+        clientRef.current = client;
+        retryCountRef.current = 0;
+        setIsReady(true);
+        setIsConnecting(false);
+      }
+    } catch (err: any) {
+      if (!cancelled.value) {
+        console.warn(`[CipherPay] CoFHE SDK init failed (attempt ${retryCountRef.current + 1}/${maxRetries}):`, err);
+        retryCountRef.current++;
+        if (retryCountRef.current < maxRetries) {
+          setTimeout(() => {
+            if (!cancelled.value) initCofhe(wc, pc, cancelled);
+          }, 2000 * retryCountRef.current);
         } else {
-          await client.connect(publicClient as any, walletClient as any);
-        }
-
-        if (!cancelled) {
-          clientRef.current = client;
-          setIsReady(true);
-          setIsConnecting(false);
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          console.warn('[CipherPay] CoFHE SDK init failed:', err);
           setError(err.message || 'FHE SDK init failed');
           setIsReady(false);
           setIsConnecting(false);
         }
       }
     }
+  }, []);
 
-    initCofhe();
-    return () => { cancelled = true; };
-  }, [walletClient, publicClient]);
+  useEffect(() => {
+    if (!walletClient || !publicClient) return;
+    const cancelled = { value: false };
+    retryCountRef.current = 0;
+    initCofhe(walletClient, publicClient, cancelled);
+    return () => { cancelled.value = true; };
+  }, [walletClient, publicClient, initCofhe]);
 
   const encrypt = useCallback(async (encryptables: any[], onStep?: (step: string, ctx?: any) => void) => {
     if (!clientRef.current) throw new Error('CofheClient not initialized');

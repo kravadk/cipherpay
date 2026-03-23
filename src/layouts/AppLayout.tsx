@@ -2,8 +2,6 @@ import { motion } from 'framer-motion';
 import { AppSidebar } from '../components/AppSidebar';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
-import { NetworkStrip } from '../components/NetworkStrip';
-
 export function AppLayout() {
   const { isConnected } = useAccount();
 
@@ -13,7 +11,6 @@ export function AppLayout() {
 
   return (
     <div className="relative min-h-screen bg-bg-base flex overflow-hidden">
-      <NetworkStrip />
       <div className="noise-overlay pointer-events-none" />
       <AppSidebar />
       <main className="flex-1 h-screen overflow-y-auto pl-60">

@@ -123,36 +123,38 @@ export function NewCipher() {
       // Step 2: FHE Encryption via CoFHE SDK
       addLog('> Initializing Fhenix CoFHE context...');
       let encryptedAmount: any = null;
-      let useFheContract = false;
 
-      if (isFheReady) {
-        addLog('> ✓ CoFHE SDK connected');
-        try {
-          addLog('> Encrypting amount with FHE (ZK Proof of Knowledge)...');
-          const Encryptable = getEncryptable();
-          if (Encryptable) {
-            const startEnc = Date.now();
-            const [encryptedResult] = await encrypt(
-              [Encryptable.uint64(amountWei)],
-              (step: string, ctx?: any) => {
-                if (ctx?.isStart) addLog(`>   ${step}...`);
-                if (ctx?.isEnd) addLog(`>   ✓ ${step} (${ctx.duration || Date.now() - startEnc}ms)`);
-              }
-            );
-            addLog(`> ✓ FHE encryption complete (${Date.now() - startEnc}ms)`);
-            addLog(`>   Ciphertext hash: ${String(encryptedResult?.ctHash || '').toString().slice(0, 20)}...`);
-            addLog(`>   Security zone: ${encryptedResult?.securityZone ?? 0}`);
-            addLog(`>   ZK proof verified ✓`);
-            encryptedAmount = encryptedResult;
-            useFheContract = true;
+      if (!isFheReady) {
+        addLog('> ✗ CoFHE SDK not ready');
+        addToast('error', 'FHE encryption required. Please wait for CoFHE SDK to initialize.');
+        setIsDeploying(false);
+        return;
+      }
+
+      addLog('> ✓ CoFHE SDK connected');
+      try {
+        addLog('> Encrypting amount with FHE (ZK Proof of Knowledge)...');
+        const Encryptable = getEncryptable();
+        if (!Encryptable) throw new Error('Encryptable not available');
+
+        const startEnc = Date.now();
+        const [encryptedResult] = await encrypt(
+          [Encryptable.uint64(amountWei)],
+          (step: string, ctx?: any) => {
+            if (ctx?.isStart) addLog(`>   ${step}...`);
+            if (ctx?.isEnd) addLog(`>   ✓ ${step} (${ctx.duration || Date.now() - startEnc}ms)`);
           }
-        } catch (fheErr: any) {
-          addLog(`> ⚠ FHE encryption: ${fheErr.message?.slice(0, 60) || 'SDK error'}`);
-          addLog(`> Falling back to Simple contract (plaintext mode)`);
-        }
-      } else {
-        addLog(`> CoFHE SDK: ${isFheConnecting ? 'connecting...' : 'initializing TFHE WASM...'}`);
-        addLog('> Using Simple contract fallback');
+        );
+        addLog(`> ✓ FHE encryption complete (${Date.now() - startEnc}ms)`);
+        addLog(`>   Ciphertext hash: ${String(encryptedResult?.ctHash || '').toString().slice(0, 20)}...`);
+        addLog(`>   Security zone: ${encryptedResult?.securityZone ?? 0}`);
+        addLog(`>   ZK proof verified ✓`);
+        encryptedAmount = encryptedResult;
+      } catch (fheErr: any) {
+        addLog(`> ✗ FHE encryption failed: ${fheErr.message?.slice(0, 60) || 'SDK error'}`);
+        addToast('error', 'FHE encryption failed. Try again.');
+        setIsDeploying(false);
+        return;
       }
 
       // Step 3: Generate salt
@@ -184,56 +186,69 @@ export function NewCipher() {
         fullMemo = `freq:${freqLabel}, cycles:${formData.maxCycles || '12'}, days:${freqDays}${formData.memo ? ', ' + formData.memo : ''}`;
       }
 
-      // Step 6: Submit to blockchain
+      // Step 6: Submit to FHE contract — always encrypted
       let txHash: `0x${string}`;
 
-      if (useFheContract && encryptedAmount) {
-        // FHE contract — send encrypted InEuint64 tuple
-        addLog('> Submitting FHE-encrypted invoice to Ethereum Sepolia...');
-        addLog(`>   Contract: ${CIPHERPAY_ADDRESS.slice(0, 10)}... (CipherPayFHE)`);
-        const encTuple = {
-          ctHash: BigInt(encryptedAmount.ctHash || encryptedAmount.data?.ctHash || 0),
-          securityZone: encryptedAmount.securityZone ?? encryptedAmount.data?.securityZone ?? 0,
-          utype: encryptedAmount.utype ?? encryptedAmount.data?.utype ?? 5, // 5 = uint64
-          signature: encryptedAmount.signature ?? encryptedAmount.data?.signature ?? '0x',
-        };
-        txHash = await writeContractAsync({
-          address: CIPHERPAY_ADDRESS,
-          abi: CIPHERPAY_ABI as any,
-          functionName: 'createInvoice',
-          args: [encTuple, recipient, typeToUint8(type), deadline, unlockBlock, salt, fullMemo],
-        });
-      } else {
-        // Simple contract fallback — send plaintext amount
-        const isVesting = type === 'vesting';
-        addLog(isVesting
-          ? `> Creating vesting escrow (${formData.amount} ETH locked until unlock block)...`
-          : '> Submitting invoice to Simple contract...');
-        const { CIPHERPAY_SIMPLE_ADDRESS } = await import('../../config/contract');
-        const simpleAbi = [{
-          name: 'createInvoice', type: 'function', stateMutability: 'payable',
-          inputs: [
-            { name: '_amount', type: 'uint256' }, { name: '_recipient', type: 'address' },
-            { name: '_invoiceType', type: 'uint8' }, { name: '_deadline', type: 'uint256' },
-            { name: '_unlockBlock', type: 'uint256' }, { name: '_salt', type: 'bytes32' },
-            { name: '_memo', type: 'string' },
-          ],
-          outputs: [{ name: '', type: 'bytes32' }],
-        }] as const;
-        txHash = await writeContractAsync({
-          address: CIPHERPAY_SIMPLE_ADDRESS,
-          abi: simpleAbi as any,
-          functionName: 'createInvoice',
-          args: [amountWei, recipient, typeToUint8(type), deadline, unlockBlock, salt, fullMemo],
-          value: isVesting ? amountWei : 0n, // Vesting: send ETH as escrow
-        } as any);
+      if (!encryptedAmount) {
+        addLog('> ✗ FHE encryption required but failed');
+        addToast('error', 'FHE encryption failed. Please wait for CoFHE SDK to initialize and try again.');
+        setIsDeploying(false);
+        return;
       }
+
+      addLog('> Submitting FHE-encrypted invoice to Ethereum Sepolia...');
+      addLog(`>   Contract: ${CIPHERPAY_ADDRESS.slice(0, 10)}... (CipherPayFHE)`);
+
+      const encAmountTuple = {
+        ctHash: BigInt(encryptedAmount.ctHash || encryptedAmount.data?.ctHash || 0),
+        securityZone: encryptedAmount.securityZone ?? encryptedAmount.data?.securityZone ?? 0,
+        utype: encryptedAmount.utype ?? encryptedAmount.data?.utype ?? 5, // 5 = uint64
+        signature: encryptedAmount.signature ?? encryptedAmount.data?.signature ?? '0x',
+      };
+
+      // Always encrypt recipient address (zero address if not specified)
+      const hasRecipient = recipient !== '0x0000000000000000000000000000000000000000';
+      const addrToEncrypt = hasRecipient ? recipient : '0x0000000000000000000000000000000000000000' as `0x${string}`;
+
+      addLog(`> Encrypting recipient address${hasRecipient ? '' : ' (open invoice)'}...`);
+      let encRecipientTuple: any;
+      try {
+        const Encryptable = getEncryptable();
+        if (!Encryptable) throw new Error('Encryptable not available');
+        const [encAddr] = await encrypt([Encryptable.address(addrToEncrypt)]);
+        encRecipientTuple = {
+          ctHash: BigInt(encAddr?.ctHash || encAddr?.data?.ctHash || 0),
+          securityZone: encAddr?.securityZone ?? encAddr?.data?.securityZone ?? 0,
+          utype: encAddr?.utype ?? encAddr?.data?.utype ?? 12,
+          signature: encAddr?.signature ?? encAddr?.data?.signature ?? '0x',
+        };
+        addLog('> ✓ Recipient address encrypted');
+      } catch (err: any) {
+        addLog(`> ✗ Recipient encryption failed: ${err.message?.slice(0, 60)}`);
+        addToast('error', 'Failed to encrypt recipient address.');
+        setIsDeploying(false);
+        return;
+      }
+
+      txHash = await writeContractAsync({
+        address: CIPHERPAY_ADDRESS,
+        abi: CIPHERPAY_ABI as any,
+        functionName: 'createInvoice',
+        args: [encAmountTuple, encRecipientTuple, hasRecipient, typeToUint8(type), deadline, unlockBlock, salt, fullMemo],
+      });
 
       addLog(`> Transaction submitted: ${txHash.slice(0, 14)}...`);
       addLog('> Awaiting block confirmation...');
 
       // Step 7: Wait for receipt
       const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
+
+      if (receipt.status === 'reverted') {
+        addLog('> ✗ Transaction reverted on-chain');
+        addToast('error', 'FHE transaction failed. Check Etherscan for details.');
+        setIsDeploying(false);
+        return;
+      }
       addLog(`> ✓ Block ${receipt.blockNumber} confirmed`);
 
       // Step 8: Extract invoice hash from event
@@ -246,7 +261,7 @@ export function NewCipher() {
             { name: 'invoiceHash', type: 'bytes32', indexed: true },
             { name: 'creator', type: 'address', indexed: true },
             { name: 'invoiceType', type: 'uint8', indexed: false },
-            { name: 'recipient', type: 'address', indexed: false },
+            { name: 'hasRecipient', type: 'bool', indexed: false },
             { name: 'deadline', type: 'uint256', indexed: false },
             { name: 'unlockBlock', type: 'uint256', indexed: false },
             { name: 'memo', type: 'string', indexed: false },
@@ -841,9 +856,9 @@ export function NewCipher() {
                 <Button variant="outline" className="flex-1" onClick={() => setStep(2)} disabled={isDeploying}>
                   <ArrowLeft className="w-5 h-5 mr-2" /> Back
                 </Button>
-                <Button className="flex-[2] gap-2" onClick={handleDeploy} disabled={isDeploying}>
+                <Button className="flex-[2] gap-2" onClick={handleDeploy} disabled={isDeploying || !isFheReady}>
                   {isDeploying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
-                  {isDeploying ? 'Deploying...' : 'Deploy to Fhenix'}
+                  {isDeploying ? 'Deploying...' : !isFheReady ? 'Waiting for FHE...' : 'Deploy to Fhenix'}
                 </Button>
               </div>
             </motion.div>

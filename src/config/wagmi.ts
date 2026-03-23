@@ -6,6 +6,6 @@ export const wagmiConfig = createConfig({
   chains: [sepolia],
   connectors: [injected(), metaMask()],
   transports: {
-    [sepolia.id]: http('https://1rpc.io/sepolia'),
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),
   },
 });
