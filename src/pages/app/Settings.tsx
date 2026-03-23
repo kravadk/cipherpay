@@ -261,7 +261,7 @@ export function Settings() {
             <div className="flex items-center gap-2">
               <FileText className="w-3.5 h-3.5 text-text-muted" />
               <span className="text-sm text-text-secondary">CipherPaySimple</span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">FALLBACK</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-surface-3 text-text-dim" title="Used for real ETH transfers when FHE is unavailable">Plaintext ETH</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-text-dim">{CIPHERPAY_SIMPLE_ADDRESS.slice(0, 8)}...{CIPHERPAY_SIMPLE_ADDRESS.slice(-6)}</span>

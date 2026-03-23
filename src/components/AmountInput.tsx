@@ -7,9 +7,10 @@ interface AmountInputProps {
   onChange: (ethValue: string) => void;
   label?: string;
   placeholder?: string;
+  hasError?: boolean;
 }
 
-export function AmountInput({ value, onChange, label = 'Amount', placeholder = '0.00' }: AmountInputProps) {
+export function AmountInput({ value, onChange, label = 'Amount', placeholder = '0.00', hasError }: AmountInputProps) {
   const [inputMode, setInputMode] = useState<'eth' | 'usd'>('eth');
   const [usdInput, setUsdInput] = useState('');
   const { price, loading, ethToUsd, usdToEth } = useEthPrice();
@@ -62,7 +63,7 @@ export function AmountInput({ value, onChange, label = 'Amount', placeholder = '
             step="0.001"
             value={value}
             onChange={(e) => handleEthChange(e.target.value)}
-            className="w-full h-14 px-6 pr-24 bg-surface-2 border border-border-default rounded-2xl text-white focus:border-primary/40 focus:outline-none transition-colors"
+            className={`w-full h-14 px-6 pr-24 bg-surface-2 border ${hasError ? 'border-red-500' : 'border-border-default'} rounded-2xl text-white focus:border-primary/40 focus:outline-none transition-colors`}
           />
         ) : (
           <input
@@ -72,7 +73,7 @@ export function AmountInput({ value, onChange, label = 'Amount', placeholder = '
             step="0.01"
             value={usdInput}
             onChange={(e) => handleUsdChange(e.target.value)}
-            className="w-full h-14 px-6 pr-24 bg-surface-2 border border-border-default rounded-2xl text-white focus:border-primary/40 focus:outline-none transition-colors"
+            className={`w-full h-14 px-6 pr-24 bg-surface-2 border ${hasError ? 'border-red-500' : 'border-border-default'} rounded-2xl text-white focus:border-primary/40 focus:outline-none transition-colors`}
           />
         )}
 

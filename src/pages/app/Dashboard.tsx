@@ -366,7 +366,7 @@ export function Dashboard() {
         </div>
 
         <div className="bg-surface-1 border border-border-default rounded-[32px] overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border-default">
@@ -378,7 +378,16 @@ export function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-default">
-                {filteredInvoices.length > 0 ? filteredInvoices.map((invoice) => (
+                {isLoadingInvoices && Array.from({length: 3}).map((_, i) => (
+                  <tr key={`skel-${i}`} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-24" /></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-16" /></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-20" /></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-14" /></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-12" /></td>
+                  </tr>
+                ))}
+                {!isLoadingInvoices && filteredInvoices.length > 0 ? filteredInvoices.map((invoice) => (
                   <tr key={invoice.id} className="group hover:bg-surface-2 transition-colors">
                     <td className="px-8 py-5">
                       <button onClick={() => handleCopyHash(invoice.hash)} className="cursor-pointer">
@@ -415,40 +424,46 @@ export function Dashboard() {
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => setDrawerInvoice(invoice)}>View</Button>
-                        {/* Claim — recurring creator */}
-                        {invoice.status === 'open' && invoice.type === 'recurring' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
-                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleClaimRecurring(invoice.hash)}>Claim</Button>
-                        )}
-                        {/* Settle — only for multi-pay creator */}
-                        {invoice.status === 'open' && invoice.type === 'multi-pay' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
-                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleSettle(invoice.hash)}>Settle</Button>
-                        )}
-                        {/* Pause — only for creator's open invoices */}
-                        {invoice.status === 'open' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
-                          <Button variant="ghost" size="sm" className="text-orange-400" onClick={() => handlePause(invoice.hash)}>Pause</Button>
-                        )}
-                        {/* Resume — only for creator's paused invoices */}
-                        {invoice.status === 'paused' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
-                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleResume(invoice.hash)}>Resume</Button>
-                        )}
-                        {/* Cancel — for creator's open or paused invoices */}
-                        {(invoice.status === 'open' || invoice.status === 'paused') && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
-                          <Button variant="ghost" size="sm" className="text-red-400" onClick={() => handleCancel(invoice.hash)}>Cancel</Button>
-                        )}
-                        {/* Pay — only for non-creator open invoices */}
+                        {/* Primary action */}
                         {invoice.status === 'open' && invoice.creator?.toLowerCase() !== address?.toLowerCase() && (
                           <Button variant="ghost" size="sm" className="text-secondary" onClick={() => navigate(`/pay/${invoice.hash}`)}>Pay</Button>
                         )}
-                        <button
-                          onClick={() => handleShareLink(invoice.hash)}
-                          className="p-2 text-text-muted hover:text-primary transition-colors"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
+                        {invoice.status === 'open' && invoice.type === 'recurring' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
+                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleClaimRecurring(invoice.hash)}>Claim</Button>
+                        )}
+                        {invoice.status === 'open' && invoice.type === 'multi-pay' && invoice.creator?.toLowerCase() === address?.toLowerCase() && (
+                          <Button variant="ghost" size="sm" className="text-primary" onClick={() => handleSettle(invoice.hash)}>Settle</Button>
+                        )}
+                        {/* More actions dropdown */}
+                        {(invoice.creator?.toLowerCase() === address?.toLowerCase() && (invoice.status === 'open' || invoice.status === 'paused')) && (
+                          <details className="relative inline-block">
+                            <summary className="list-none cursor-pointer p-2 text-text-muted hover:text-primary transition-colors rounded-lg hover:bg-surface-2">
+                              <span className="text-sm font-bold tracking-wide">...</span>
+                            </summary>
+                            <div className="absolute right-0 top-full mt-1 z-50 bg-surface-1 border border-border-default rounded-xl shadow-xl py-1 min-w-[140px]">
+                              {invoice.status === 'open' && (
+                                <button onClick={() => handlePause(invoice.hash)} className="w-full text-left px-4 py-2 text-xs font-bold text-orange-400 hover:bg-surface-2 transition-colors">Pause</button>
+                              )}
+                              {invoice.status === 'paused' && (
+                                <button onClick={() => handleResume(invoice.hash)} className="w-full text-left px-4 py-2 text-xs font-bold text-primary hover:bg-surface-2 transition-colors">Resume</button>
+                              )}
+                              <button onClick={() => handleCancel(invoice.hash)} className="w-full text-left px-4 py-2 text-xs font-bold text-red-400 hover:bg-surface-2 transition-colors">Cancel</button>
+                              <button onClick={() => handleShareLink(invoice.hash)} className="w-full text-left px-4 py-2 text-xs font-bold text-text-secondary hover:bg-surface-2 transition-colors">Share Link</button>
+                            </div>
+                          </details>
+                        )}
+                        {!(invoice.creator?.toLowerCase() === address?.toLowerCase() && (invoice.status === 'open' || invoice.status === 'paused')) && (
+                          <button
+                            onClick={() => handleShareLink(invoice.hash)}
+                            className="p-2 text-text-muted hover:text-primary transition-colors"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
-                )) : (
+                )) : !isLoadingInvoices ? (
                   <tr>
                     <td colSpan={5} className="px-8 py-16 text-center">
                       <div className="flex flex-col items-center gap-6 relative">
@@ -469,7 +484,7 @@ export function Dashboard() {
                       </div>
                     </td>
                   </tr>
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>

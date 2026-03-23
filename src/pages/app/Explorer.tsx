@@ -49,7 +49,7 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
         </div>
         <div className="space-y-1">
           <p className="text-xs text-text-muted uppercase tracking-widest">Created</p>
-          <p className="text-xs text-text-secondary">{new Date(invoice.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+          <p className="text-xs text-text-secondary">{new Date(invoice.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export function Explorer() {
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter(invoice => {
-      const matchesSearch = search.length < 4 ? true :
+      const matchesSearch = search.length < 2 ? true :
         invoice.hash.toLowerCase().includes(search.toLowerCase()) ||
         invoice.id.includes(search);
 

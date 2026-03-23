@@ -142,6 +142,16 @@ function SidebarSection({ label, children, badge }: SidebarSectionProps) {
   );
 }
 
+const getRelativeTime = (timestamp: number) => {
+  const diff = timestamp - Date.now() / 1000;
+  if (diff <= 0) return 'Expired';
+  const hours = Math.floor(diff / 3600);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `Expires in ${days}d ${hours % 24}h`;
+  if (hours > 0) return `Expires in ${hours}h`;
+  return `Expires in ${Math.floor(diff / 60)}m`;
+};
+
 export function AppSidebar() {
   const location = useLocation();
   const { address } = useAccount();
@@ -190,9 +200,12 @@ export function AppSidebar() {
         <BalanceDisplay />
 
         {permitActive ? (
-          <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-xl" title={`Signed permit expires ${permitExpiry ? new Date(permitExpiry).toLocaleString('en-US') : 'N/A'}`}>
+          <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-xl" title={permitExpiry ? getRelativeTime(permitExpiry / 1000) : 'N/A'}>
             <div className="w-1.5 h-1.5 rounded-full bg-primary" />
             <span className="text-xs font-bold text-primary uppercase tracking-widest">Permit active</span>
+            {permitExpiry && (
+              <span className="text-[10px] text-primary/60 ml-auto">{getRelativeTime(permitExpiry / 1000)}</span>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2 px-3 py-2 bg-surface-2 rounded-xl">

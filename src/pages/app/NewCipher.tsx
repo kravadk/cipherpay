@@ -49,6 +49,7 @@ export function NewCipher() {
   const [deployLogs, setDeployLogs] = useState<string[]>([]);
   const [deployedHash, setDeployedHash] = useState<string | null>(null);
   const [deployedTxHash, setDeployedTxHash] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Invoice data comes only from blockchain — no local store
   const { addToast } = useToastStore();
@@ -90,24 +91,28 @@ export function NewCipher() {
     // Validate amount
     const amountCheck = isValidAmount(formData.amount);
     if (!amountCheck.valid) {
+      setFieldErrors(prev => ({ ...prev, amount: true }));
       addToast('error', amountCheck.error || 'Invalid amount');
       return;
     }
 
     // Validate recipient
     if (formData.recipient && !isValidAddress(formData.recipient)) {
+      setFieldErrors(prev => ({ ...prev, recipient: true }));
       addToast('error', 'Invalid recipient address (must be 0x + 40 hex characters)');
       return;
     }
 
     // Vesting requires recipient
     if (type === 'vesting' && !formData.recipient) {
+      setFieldErrors(prev => ({ ...prev, recipient: true }));
       addToast('error', 'Vesting invoices require a recipient address');
       return;
     }
 
     // Vesting requires unlock date
     if (type === 'vesting' && !formData.unlockDate) {
+      setFieldErrors(prev => ({ ...prev, unlockDate: true }));
       addToast('error', 'Vesting invoices require an unlock date');
       return;
     }
@@ -418,16 +423,17 @@ export function NewCipher() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <AmountInput
                       value={formData.amount}
-                      onChange={(val) => setFormData({ ...formData, amount: val })}
+                      onChange={(val) => { setFieldErrors(prev => ({ ...prev, amount: false })); setFormData({ ...formData, amount: val }); }}
+                      hasError={fieldErrors.amount}
                     />
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
                         Recipient Address {type === 'vesting' ? <span className="text-red-400">*</span> : null} <Lock className="w-3 h-3 text-text-dim" />
                       </label>
                       <input type="text" placeholder={type === 'vesting' ? '0x... (required for vesting)' : '0x... (optional)'} value={formData.recipient}
-                        onChange={(e) => setFormData({ ...formData, recipient: e.target.value })}
+                        onChange={(e) => { setFieldErrors(prev => ({ ...prev, recipient: false })); setFormData({ ...formData, recipient: e.target.value }); }}
                         className={`w-full h-14 px-6 bg-surface-2 border rounded-2xl text-white font-mono focus:border-primary/40 focus:outline-none transition-colors ${
-                          type === 'vesting' && !formData.recipient ? 'border-yellow-500/30' : 'border-border-default'
+                          fieldErrors.recipient ? 'border-red-500' : type === 'vesting' && !formData.recipient ? 'border-yellow-500/30' : 'border-border-default'
                         }`} />
                       {type === 'vesting' && !formData.recipient && (
                         <p className="text-xs text-yellow-500">Vesting requires a recipient — only they can claim after unlock</p>

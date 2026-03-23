@@ -134,6 +134,7 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
               className="flex items-center gap-1.5"
             >
               <span className={`${textSize} font-bold tracking-widest text-text-muted`}>••••••</span>
+              {isDecrypting && <div className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
               <span className="text-[8px] font-bold text-blue-500/60 bg-blue-500/10 px-1 py-0.5 rounded uppercase tracking-wider">FHE</span>
             </motion.div>
           ) : (

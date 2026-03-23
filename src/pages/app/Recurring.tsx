@@ -35,7 +35,7 @@ function CountdownTimer({ targetDate }: { targetDate: string }) {
 
 export function Recurring() {
   const navigate = useNavigate();
-  const { invoices: allInvoices } = useInvoices();
+  const { invoices: allInvoices, isLoading: isLoadingInvoices } = useInvoices();
   const invoices = allInvoices;
   const { isDeployed } = useContractStatus();
   const { writeContractAsync } = useWriteContract();
@@ -133,15 +133,26 @@ export function Recurring() {
               <tr className="border-b border-border-default">
                 <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Hash</th>
                 <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Recipient</th>
-                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Frequency</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest hidden md:table-cell">Frequency</th>
                 <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Next Date</th>
-                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Cycles</th>
+                <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest hidden md:table-cell">Cycles</th>
                 <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Status</th>
                 <th className="px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-default">
-              {recurringInvoices.length > 0 ? recurringInvoices.map((invoice) => {
+              {isLoadingInvoices && Array.from({length: 3}).map((_, i) => (
+                <tr key={`skel-${i}`} className="animate-pulse">
+                  <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-24" /></td>
+                  <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-20" /></td>
+                  <td className="px-6 py-4 hidden md:table-cell"><div className="h-4 bg-surface-2 rounded w-16" /></td>
+                  <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-20" /></td>
+                  <td className="px-6 py-4 hidden md:table-cell"><div className="h-4 bg-surface-2 rounded w-14" /></td>
+                  <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-16" /></td>
+                  <td className="px-6 py-4"><div className="h-4 bg-surface-2 rounded w-12" /></td>
+                </tr>
+              ))}
+              {!isLoadingInvoices && recurringInvoices.length > 0 ? recurringInvoices.map((invoice) => {
                 const status = getStatus(invoice);
                 const totalCycles = (invoice.cyclesLeft ?? 0) + (12 - (invoice.cyclesLeft ?? 0));
                 const completedCycles = 12 - (invoice.cyclesLeft ?? 0);
@@ -155,7 +166,7 @@ export function Recurring() {
                     <td className="px-8 py-5">
                       <span className="text-sm font-mono text-text-secondary">{invoice.recipient}</span>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 hidden md:table-cell">
                       <span className="text-xs font-bold text-text-primary uppercase tracking-widest px-2 py-1 bg-surface-2 rounded-md border border-border-default">
                         {invoice.memo?.includes('freq:')
                           ? invoice.memo.split('freq:')[1]?.split(',')[0]?.trim() || 'Recurring'
@@ -169,7 +180,7 @@ export function Recurring() {
                           : '—'}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-text-secondary">
                           {invoice.memo?.includes('cycles:')
@@ -209,7 +220,7 @@ export function Recurring() {
                     </td>
                   </tr>
                 );
-              }) : (
+              }) : !isLoadingInvoices ? (
                 <tr>
                   <td colSpan={7} className="px-8 py-16 text-center">
                     <div className="flex flex-col items-center gap-4">
@@ -221,7 +232,7 @@ export function Recurring() {
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>
