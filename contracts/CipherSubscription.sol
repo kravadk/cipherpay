@@ -53,7 +53,6 @@ contract CipherSubscription {
         tierPrice[TIER_BUSINESS] = 0.03 ether;
     }
 
-    // ─── Subscribe or upgrade ───────────────────────────────────
 
     /**
      * @notice Subscribe to a tier or upgrade existing subscription
@@ -134,7 +133,6 @@ contract CipherSubscription {
         emit Renewed(msg.sender, msg.value);
     }
 
-    // ─── Query (permit-based decryption) ────────────────────────
 
     /**
      * @notice Get encrypted tier — decrypt via permit (only subscriber or owner)
@@ -159,7 +157,6 @@ contract CipherSubscription {
         return _hasSubscription[user];
     }
 
-    // ─── On-chain access gating (for other contracts) ───────────
 
     /**
      * @notice Returns encrypted boolean: is user's subscription active?
@@ -185,7 +182,6 @@ contract CipherSubscription {
         return FHE.and(active, tierOk);
     }
 
-    // ─── Admin ──────────────────────────────────────────────────
 
     function setPrice(uint8 _tierLevel, uint256 _price) external onlyOwner {
         require(_tierLevel == TIER_PRO || _tierLevel == TIER_BUSINESS, "Invalid tier");
@@ -212,7 +208,6 @@ contract CipherSubscription {
         owner = newOwner;
     }
 
-    // ─── Internal ───────────────────────────────────────────────
 
     function _updateAggregates(uint256 amount) private {
         euint64 encAmount = FHE.asEuint64(uint64(amount / 1e12)); // store in micro-ETH to fit uint64

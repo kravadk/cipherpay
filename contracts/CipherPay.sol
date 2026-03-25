@@ -4,7 +4,6 @@ pragma solidity ^0.8.25;
 import "@fhenixprotocol/cofhe-contracts/FHE.sol";
 
 contract CipherPay {
-    // ── Types ──────────────────────────────────────────────
 
     struct Invoice {
         address creator;
@@ -18,13 +17,11 @@ contract CipherPay {
         uint256 unlockBlock;    // vesting only, 0 = no lock
     }
 
-    // ── Storage ────────────────────────────────────────────
 
     mapping(bytes32 => Invoice) private _invoices;
     mapping(address => bytes32[]) private _userInvoices;
     mapping(bytes32 => mapping(address => bool)) public payments;
 
-    // ── Events ─────────────────────────────────────────────
 
     event InvoiceCreated(
         bytes32 indexed invoiceHash,
@@ -43,7 +40,6 @@ contract CipherPay {
     event InvoiceSettled(bytes32 indexed invoiceHash);
     event InvoiceCancelled(bytes32 indexed invoiceHash);
 
-    // ── Create Invoice ─────────────────────────────────────
 
     function createInvoice(
         InEuint64 memory _encryptedAmount,
@@ -111,7 +107,6 @@ contract CipherPay {
         return invoiceHash;
     }
 
-    // ── Pay Invoice ────────────────────────────────────────
 
     function payInvoice(
         bytes32   _invoiceHash,
@@ -156,7 +151,6 @@ contract CipherPay {
         emit InvoicePaid(_invoiceHash, msg.sender);
     }
 
-    // ── Settle (multipay only) ─────────────────────────────
 
     function settleInvoice(bytes32 _invoiceHash) external {
         Invoice storage inv = _invoices[_invoiceHash];
@@ -170,7 +164,6 @@ contract CipherPay {
         emit InvoiceSettled(_invoiceHash);
     }
 
-    // ── Cancel ─────────────────────────────────────────────
 
     function cancelInvoice(bytes32 _invoiceHash) external {
         Invoice storage inv = _invoices[_invoiceHash];
@@ -183,7 +176,6 @@ contract CipherPay {
         emit InvoiceCancelled(_invoiceHash);
     }
 
-    // ── View Functions ─────────────────────────────────────
 
     function getInvoice(bytes32 _invoiceHash) external view returns (
         address creator,

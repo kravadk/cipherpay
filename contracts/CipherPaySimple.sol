@@ -80,7 +80,6 @@ contract CipherPaySimple {
         return invoiceHash;
     }
 
-    // ── Recurring: escrow + periodic claims ──────────────────
 
     /**
      * @notice Payer deposits full amount into escrow for recurring invoice.
@@ -341,7 +340,6 @@ contract CipherPaySimple {
         inv.status = 0;
     }
 
-    // ── View Functions ─────────────────────────────────────
 
     function getInvoice(bytes32 _invoiceHash) external view returns (
         address creator, address recipient, uint8 invoiceType, uint8 status,

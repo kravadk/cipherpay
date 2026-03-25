@@ -19,3 +19,6 @@ public/tfhe_bg.wasm
 # IDE
 .vscode/
 .idea/
+.claude/
+.cursor/
+.aider/

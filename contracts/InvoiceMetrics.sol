@@ -98,8 +98,6 @@ contract InvoiceMetrics {
         emit MetricsUpdated(_creator);
     }
 
-    // ========== View Functions (return encrypted handles, need permit to decrypt) ==========
-
     function getTotalSent(address _user) external view returns (euint64) {
         return _stats[_user].totalSent;
     }

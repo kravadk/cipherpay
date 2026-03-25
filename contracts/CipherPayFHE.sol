@@ -233,8 +233,6 @@ contract CipherPayFHE {
 
     receive() external payable {}
 
-    // ========== BREAKDOWN ==========
-
     function addBreakdownItem(bytes32 _invoiceHash, string calldata _label, InEuint64 calldata _encryptedPrice) external {
         Invoice storage inv = invoices[_invoiceHash];
         require(inv.creator == msg.sender, "Only creator");
@@ -258,8 +256,6 @@ contract CipherPayFHE {
         require(_index < _breakdowns[_invoiceHash].length, "Index out of bounds");
         return _breakdowns[_invoiceHash][_index].encryptedPrice;
     }
-
-    // ========== VIEW ==========
 
     function getInvoice(bytes32 _invoiceHash) external view returns (
         address creator, bool hasRecipient, uint8 invoiceType, uint8 status,
@@ -294,8 +290,6 @@ contract CipherPayFHE {
         return (value, isReady);
     }
 
-    // ========== TAX ==========
-
     function setInvoiceTax(bytes32 _invoiceHash, uint64 _taxBps) external {
         Invoice storage inv = invoices[_invoiceHash];
         require(inv.creator == msg.sender, "Only creator");
@@ -316,8 +310,6 @@ contract CipherPayFHE {
         FHE.allowSender(nonce);
         return nonce;
     }
-
-    // ========== PLATFORM ==========
 
     function _ensurePlatformInit() internal {
         if (!_platformInitialized) {

@@ -45,8 +45,8 @@ async function main() {
   const balABefore = await deployer.provider.getBalance(deployer.address)
   console.log('\nWallet A balance before:', ethers.formatEther(balABefore), 'ETH')
 
-  // ============ TEST 1: Create Standard Invoice ============
-  console.log('\n========== TEST 1: Create Standard Invoice ==========')
+  // TEST 1: Create Standard Invoice
+  console.log('\n TEST 1: Create Standard Invoice ')
   const amount = ethers.parseEther('0.001')
   const salt = ethers.hexlify(ethers.randomBytes(32))
 
@@ -62,14 +62,14 @@ async function main() {
   )
   console.log('Create TX:', createTx.hash)
   const createReceipt = await createTx.wait()
-  console.log('Status:', createReceipt.status === 1 ? 'SUCCESS' : 'FAILED')
+  console.log('Status:', createReceipt.status  1 ? 'SUCCESS' : 'FAILED')
 
   // Extract invoice hash from event
   let invoiceHash = null
   for (const log of createReceipt.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCreated') {
+      if (parsed?.name  'InvoiceCreated') {
         invoiceHash = parsed.args.invoiceHash
         console.log('Invoice Hash:', invoiceHash)
         console.log('Type:', parsed.args.invoiceType)
@@ -91,8 +91,8 @@ async function main() {
   console.log('  Status:', ['OPEN', 'SETTLED', 'CANCELLED', 'PAUSED'][invoice.status])
   console.log('  Amount:', ethers.formatEther(await contractA.getInvoiceAmount(invoiceHash)), 'ETH')
 
-  // ============ TEST 2: Pay Invoice (from Wallet B) ============
-  console.log('\n========== TEST 2: Pay Invoice (Wallet B) ==========')
+  // TEST 2: Pay Invoice (from Wallet B)
+  console.log('\n TEST 2: Pay Invoice (Wallet B) ')
   const payTx = await contractB.payInvoice(
     invoiceHash,
     amount,
@@ -100,26 +100,26 @@ async function main() {
   )
   console.log('Pay TX:', payTx.hash)
   const payReceipt = await payTx.wait()
-  console.log('Status:', payReceipt.status === 1 ? 'SUCCESS' : 'FAILED')
+  console.log('Status:', payReceipt.status  1 ? 'SUCCESS' : 'FAILED')
 
   // Check for events
   for (const log of payReceipt.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoicePaid') {
+      if (parsed?.name  'InvoicePaid') {
         console.log('Payment recorded:')
         console.log('  Payer:', parsed.args.payer)
         console.log('  Amount:', ethers.formatEther(parsed.args.amount), 'ETH')
         console.log('  Total collected:', ethers.formatEther(parsed.args.totalCollected), 'ETH')
       }
-      if (parsed?.name === 'InvoiceSettled') {
+      if (parsed?.name  'InvoiceSettled') {
         console.log('Invoice auto-settled!')
       }
     } catch {}
   }
 
-  // ============ TEST 3: Verify Settlement ============
-  console.log('\n========== TEST 3: Verify Settlement ==========')
+  // TEST 3: Verify Settlement
+  console.log('\n TEST 3: Verify Settlement ')
   const invoiceAfter = await contractA.getInvoice(invoiceHash)
   console.log('Status after payment:', ['OPEN', 'SETTLED', 'CANCELLED', 'PAUSED'][invoiceAfter.status])
 
@@ -134,18 +134,18 @@ async function main() {
   console.log('Balance change:', ethers.formatEther(diff), 'ETH (includes gas costs)')
 
   // Verify ETH was received (balance should increase by ~0.001 minus gas)
-  if (Number(invoiceAfter.status) === 1) {
+  if (Number(invoiceAfter.status)  1) {
     console.log('\n✓ PASS — Invoice created, paid, and auto-settled with real ETH transfer')
   } else {
     console.log('\n✗ FAIL — Invoice not settled after payment (status:', invoiceAfter.status, ')')
   }
 
-  // ============ TEST 4: List user invoices ============
-  console.log('\n========== TEST 4: User Invoices ==========')
+  // TEST 4: List user invoices
+  console.log('\n TEST 4: User Invoices ')
   const userInvoices = await contractA.getUserInvoices(deployer.address)
   console.log('Total invoices for Wallet A:', userInvoices.length)
 
-  console.log('\n========== ALL TESTS COMPLETE ==========')
+  console.log('\n ALL TESTS COMPLETE ')
 }
 
 main().catch((err) => {

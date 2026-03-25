@@ -47,7 +47,7 @@ async function getInvoiceHash(contract: any, receipt: any): Promise<string> {
   for (const log of receipt.logs) {
     try {
       const parsed = contract.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCreated') return parsed.args[0]
+      if (parsed?.name  'InvoiceCreated') return parsed.args[0]
     } catch {}
   }
   throw new Error('InvoiceCreated event not found')
@@ -66,9 +66,9 @@ async function main() {
   }
   const walletB = new ethers.Wallet(pk2, walletA.provider)
 
-  console.log('='.repeat(60))
+  console.log('---'.repeat(60))
   console.log('CipherPay Full E2E Test')
-  console.log('='.repeat(60))
+  console.log('---'.repeat(60))
   console.log('Wallet A (creator):', walletA.address)
   console.log('Wallet B (payer):', walletB.address)
 
@@ -81,7 +81,7 @@ async function main() {
   const contractA = new ethers.Contract(SIMPLE, SIMPLE_ABI, walletA)
   const contractB = new ethers.Contract(SIMPLE, SIMPLE_ABI, walletB)
 
-  // ============ TEST 1: Standard Invoice ============
+  // TEST 1: Standard Invoice
   console.log('TEST 1: Standard Invoice (create → pay → auto-settle)')
   const amt1 = ethers.parseEther('0.001')
   const tx1 = await contractA.createInvoice(amt1, ethers.ZeroAddress, 0, 0, 0, ethers.hexlify(ethers.randomBytes(32)), 'Standard test', { gasLimit: 300000 })
@@ -90,7 +90,7 @@ async function main() {
   console.log('  Invoice:', hash1.slice(0, 16) + '...')
 
   const inv1Before = await contractA.getInvoice(hash1)
-  check('Status is OPEN', Number(inv1Before[3]) === 0)
+  check('Status is OPEN', Number(inv1Before[3])  0)
 
   const contractBalBefore = await walletA.provider.getBalance(SIMPLE)
   const payTx1 = await contractB.payInvoice(hash1, amt1, { value: amt1, gasLimit: 300000 })
@@ -98,16 +98,16 @@ async function main() {
   const contractBalAfter = await walletA.provider.getBalance(SIMPLE)
 
   const inv1After = await contractA.getInvoice(hash1)
-  check('Status is SETTLED', Number(inv1After[3]) === 1)
+  check('Status is SETTLED', Number(inv1After[3])  1)
   // For auto-settle: ETH goes from contract to creator, so contract balance should not increase
   check('ETH transferred (not held on contract)', contractBalAfter <= contractBalBefore)
 
   const collected1 = await contractA.getInvoiceCollected(hash1)
-  check('Collected equals amount', collected1[0] === amt1)
-  check('Payer count is 1', Number(collected1[2]) === 1)
+  check('Collected equals amount', collected1[0]  amt1)
+  check('Payer count is 1', Number(collected1[2])  1)
   console.log()
 
-  // ============ TEST 2: Multi Pay ============
+  // TEST 2: Multi Pay
   console.log('TEST 2: Multi Pay (partial payments → creator settle)')
   const amt2 = ethers.parseEther('0.003')
   const tx2 = await contractA.createInvoice(amt2, ethers.ZeroAddress, 1, 0, 0, ethers.hexlify(ethers.randomBytes(32)), 'Multi pay test', { gasLimit: 300000 })
@@ -120,17 +120,17 @@ async function main() {
   await pay2a.wait()
 
   const col2a = await contractA.getInvoiceCollected(hash2)
-  check('Collected 0.001 after first payment', ethers.formatEther(col2a[0]) === '0.001')
-  check('Still OPEN (multipay)', Number((await contractA.getInvoice(hash2))[3]) === 0)
+  check('Collected 0.001 after first payment', ethers.formatEther(col2a[0])  '0.001')
+  check('Still OPEN (multipay)', Number((await contractA.getInvoice(hash2))[3])  0)
 
   // Wallet A pays 0.002
   const pay2b = await contractA.payInvoice(hash2, ethers.parseEther('0.002'), { value: ethers.parseEther('0.002'), gasLimit: 300000 })
   await pay2b.wait()
 
   const col2b = await contractA.getInvoiceCollected(hash2)
-  check('Collected 0.003 after second payment', ethers.formatEther(col2b[0]) === '0.003')
-  check('Payer count is 2', Number(col2b[2]) === 2)
-  check('Still OPEN (needs manual settle)', Number((await contractA.getInvoice(hash2))[3]) === 0)
+  check('Collected 0.003 after second payment', ethers.formatEther(col2b[0])  '0.003')
+  check('Payer count is 2', Number(col2b[2])  2)
+  check('Still OPEN (needs manual settle)', Number((await contractA.getInvoice(hash2))[3])  0)
 
   // Creator settles
   const balABeforeSettle = await walletA.provider.getBalance(walletA.address)
@@ -138,11 +138,11 @@ async function main() {
   await settleTx.wait()
   const balAAfterSettle = await walletA.provider.getBalance(walletA.address)
 
-  check('Status is SETTLED after settle', Number((await contractA.getInvoice(hash2))[3]) === 1)
+  check('Status is SETTLED after settle', Number((await contractA.getInvoice(hash2))[3])  1)
   check('Creator received collected ETH', balAAfterSettle > balABeforeSettle)
   console.log()
 
-  // ============ TEST 3: Pause / Resume ============
+  // TEST 3: Pause / Resume
   console.log('TEST 3: Pause / Resume')
   const amt3 = ethers.parseEther('0.001')
   const tx3 = await contractA.createInvoice(amt3, ethers.ZeroAddress, 0, 0, 0, ethers.hexlify(ethers.randomBytes(32)), 'Pause test', { gasLimit: 300000 })
@@ -151,14 +151,14 @@ async function main() {
 
   // Pause
   await (await contractA.pauseInvoice(hash3, { gasLimit: 100000 })).wait()
-  check('Status is PAUSED (3)', Number((await contractA.getInvoice(hash3))[3]) === 3)
+  check('Status is PAUSED (3)', Number((await contractA.getInvoice(hash3))[3])  3)
 
   // Try to pay while paused — should fail
   let payPausedFailed = false
   try {
     const ptx = await contractB.payInvoice(hash3, amt3, { value: amt3, gasLimit: 300000 })
     const preceipt = await ptx.wait()
-    if (preceipt.status === 0) payPausedFailed = true
+    if (preceipt.status  0) payPausedFailed = true
   } catch {
     payPausedFailed = true
   }
@@ -166,14 +166,14 @@ async function main() {
 
   // Resume
   await (await contractA.resumeInvoice(hash3, { gasLimit: 100000 })).wait()
-  check('Status is OPEN after resume', Number((await contractA.getInvoice(hash3))[3]) === 0)
+  check('Status is OPEN after resume', Number((await contractA.getInvoice(hash3))[3])  0)
 
   // Pay after resume — should succeed
   await (await contractB.payInvoice(hash3, amt3, { value: amt3, gasLimit: 300000 })).wait()
-  check('Payment succeeds after resume', Number((await contractA.getInvoice(hash3))[3]) === 1)
+  check('Payment succeeds after resume', Number((await contractA.getInvoice(hash3))[3])  1)
   console.log()
 
-  // ============ TEST 4: Cancel with Refund ============
+  // TEST 4: Cancel with Refund
   console.log('TEST 4: Cancel with Refund')
   const amt4 = ethers.parseEther('0.002')
   const tx4 = await contractA.createInvoice(amt4, ethers.ZeroAddress, 1, 0, 0, ethers.hexlify(ethers.randomBytes(32)), 'Cancel test', { gasLimit: 300000 })
@@ -189,11 +189,11 @@ async function main() {
   await (await contractA.cancelInvoice(hash4, { gasLimit: 300000 })).wait()
   const balBAfterCancel = await walletA.provider.getBalance(walletB.address)
 
-  check('Status is CANCELLED (2)', Number((await contractA.getInvoice(hash4))[3]) === 2)
+  check('Status is CANCELLED (2)', Number((await contractA.getInvoice(hash4))[3])  2)
   check('Payer refunded', balBAfterCancel > balBBeforeCancel)
   console.log()
 
-  // ============ TEST 5: Vesting (Escrow) ============
+  // TEST 5: Vesting (Escrow)
   console.log('TEST 5: Vesting (creator deposits → recipient claims after unlock)')
   const amt5 = ethers.parseEther('0.001')
   const currentBlock = await walletA.provider.getBlockNumber()
@@ -209,17 +209,17 @@ async function main() {
   console.log('  Unlock block:', unlockBlock, '(current:', currentBlock, ')')
 
   const inv5 = await contractA.getInvoice(hash5)
-  check('Creator is Wallet A', inv5[0].toLowerCase() === walletA.address.toLowerCase())
-  check('Recipient is Wallet B', inv5[1].toLowerCase() === walletB.address.toLowerCase())
-  check('Type is VESTING (3)', Number(inv5[2]) === 3)
-  check('Status is OPEN', Number(inv5[3]) === 0)
+  check('Creator is Wallet A', inv5[0].toLowerCase()  walletA.address.toLowerCase())
+  check('Recipient is Wallet B', inv5[1].toLowerCase()  walletB.address.toLowerCase())
+  check('Type is VESTING (3)', Number(inv5[2])  3)
+  check('Status is OPEN', Number(inv5[3])  0)
 
   // Try claim before unlock — should fail
   let claimEarlyFailed = false
   try {
     const claimTx = await (new ethers.Contract(SIMPLE, SIMPLE_ABI, walletB)).claimVesting(hash5, { gasLimit: 200000 })
     const claimR = await claimTx.wait()
-    if (claimR.status === 0) claimEarlyFailed = true
+    if (claimR.status  0) claimEarlyFailed = true
   } catch (e: any) {
     claimEarlyFailed = true
     console.log('  Early claim error (expected):', e.message?.slice(0, 80))
@@ -248,13 +248,13 @@ async function main() {
   const balBBeforeClaim = 0n
   const balBAfterClaim = 0n
 
-  check('Status is SETTLED after claim', Number((await contractA.getInvoice(hash5))[3]) === 1)
+  check('Status is SETTLED after claim', Number((await contractA.getInvoice(hash5))[3])  1)
   // Note: recipient pays gas for claim, so net balance may decrease slightly
   // Instead check that invoice status changed to settled (ETH was sent even if gas > claimed)
-  check('Vesting claim executed successfully', Number((await contractA.getInvoice(hash5))[3]) === 1)
+  check('Vesting claim executed successfully', Number((await contractA.getInvoice(hash5))[3])  1)
   console.log()
 
-  // ============ TEST 6: Recurring ============
+  // TEST 6: Recurring
   console.log('TEST 6: Recurring Invoice')
   const amt6 = ethers.parseEther('0.001')
   const tx6 = await contractA.createInvoice(amt6, walletB.address, 2, 0, 0, ethers.hexlify(ethers.randomBytes(32)), 'frequency:weekly|cycles:4|start:2026-03-22', { gasLimit: 300000 })
@@ -262,15 +262,15 @@ async function main() {
   const hash6 = await getInvoiceHash(contractA, r6)
 
   const inv6 = await contractA.getInvoice(hash6)
-  check('Type is RECURRING (2)', Number(inv6[2]) === 2)
-  check('Recipient is Wallet B', inv6[1].toLowerCase() === walletB.address.toLowerCase())
+  check('Type is RECURRING (2)', Number(inv6[2])  2)
+  check('Recipient is Wallet B', inv6[1].toLowerCase()  walletB.address.toLowerCase())
 
   // Wallet B pays
   await (await contractB.payInvoice(hash6, amt6, { value: amt6, gasLimit: 300000 })).wait()
-  check('Status is SETTLED after payment', Number((await contractA.getInvoice(hash6))[3]) === 1)
+  check('Status is SETTLED after payment', Number((await contractA.getInvoice(hash6))[3])  1)
   console.log()
 
-  // ============ TEST 7: User Invoice Lists ============
+  // TEST 7: User Invoice Lists
   console.log('TEST 7: User Invoice Lists')
   const userInvA = await contractA.getUserInvoices(walletA.address)
   const paidInvB = await contractA.getPaidInvoices(walletB.address)
@@ -280,7 +280,7 @@ async function main() {
   console.log('  Wallet B paid:', paidInvB.length, 'invoices')
   console.log()
 
-  // ============ TEST 8: FHE Contract ============
+  // TEST 8: FHE Contract
   console.log('TEST 8: FHE Contract (verify deployed + readable)')
   const fheAbi = [
     'function getInvoice(bytes32) external view returns (address,address,uint8,uint8,uint256,uint256,uint256,uint256)',
@@ -295,15 +295,15 @@ async function main() {
   console.log('  FHE invoices for Wallet A:', fheInvoices.length)
   console.log()
 
-  // ============ RESULTS ============
-  console.log('='.repeat(60))
+  // RESULTS
+  console.log('---'.repeat(60))
   console.log(`RESULTS: ${passed} passed, ${failed} failed, ${passed + failed} total`)
-  if (failed === 0) {
+  if (failed  0) {
     console.log('ALL TESTS PASSED ✓')
   } else {
     console.log(`${failed} TESTS FAILED ✗`)
   }
-  console.log('='.repeat(60))
+  console.log('---'.repeat(60))
 }
 
 main().catch((err) => {

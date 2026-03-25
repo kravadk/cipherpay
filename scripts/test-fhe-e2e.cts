@@ -64,14 +64,14 @@ async function main() {
     try {
       const tx = await fn()
       const receipt = await tx.wait()
-      return receipt.status === 0
+      return receipt.status  0
     } catch {
       return true
     }
   }
 
-  // ========== TEST 1: Create Standard Invoice ==========
-  console.log('\n========== TEST 1: Create Standard Invoice ==========')
+  // TEST 1: Create Standard Invoice
+  console.log('\n TEST 1: Create Standard Invoice ')
 
   const invoiceAmount = ethers.parseEther('0.001')
   const salt = ethers.hexlify(ethers.randomBytes(32))
@@ -103,7 +103,7 @@ async function main() {
   for (const log of createReceipt.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCreated') invoiceHash = parsed.args.invoiceHash
+      if (parsed?.name  'InvoiceCreated') invoiceHash = parsed.args.invoiceHash
     } catch {}
   }
 
@@ -111,28 +111,28 @@ async function main() {
   pass('Invoice created')
   console.log('  Hash:', invoiceHash)
 
-  // ========== TEST 2: Verify Invoice On-chain ==========
-  console.log('\n========== TEST 2: Verify Invoice On-chain ==========')
+  // TEST 2: Verify Invoice On-chain
+  console.log('\n TEST 2: Verify Invoice On-chain ')
 
   const inv = await contractA.getInvoice(invoiceHash)
-  if (inv.creator === walletA.address) pass('Creator matches')
+  if (inv.creator  walletA.address) pass('Creator matches')
   else fail('Creator', `Expected ${walletA.address}, got ${inv.creator}`)
 
-  if (inv.hasRecipient === true) pass('hasRecipient = true')
+  if (inv.hasRecipient  true) pass('hasRecipient = true')
   else fail('hasRecipient', `got ${inv.hasRecipient}`)
 
-  if (Number(inv.invoiceType) === 0) pass('Type = standard')
+  if (Number(inv.invoiceType)  0) pass('Type = standard')
   else fail('Type', `got ${inv.invoiceType}`)
 
-  if (Number(inv.status) === 0) pass('Status = open')
+  if (Number(inv.status)  0) pass('Status = open')
   else fail('Status', `got ${inv.status}`)
 
   const memo = await contractA.getInvoiceMemo(invoiceHash)
-  if (memo === 'E2E FHE test') pass('Memo matches')
+  if (memo  'E2E FHE test') pass('Memo matches')
   else fail('Memo', `got "${memo}"`)
 
-  // ========== TEST 3: Verify Encryption (amounts not readable) ==========
-  console.log('\n========== TEST 3: Verify FHE Encryption ==========')
+  // TEST 3: Verify Encryption (amounts not readable)
+  console.log('\n TEST 3: Verify FHE Encryption ')
 
   const encAmountHandle = await contractA.getEncryptedAmount(invoiceHash)
   console.log('  encryptedAmount handle:', encAmountHandle.toString().slice(0, 20) + '...')
@@ -140,7 +140,7 @@ async function main() {
   // The handle should be a non-zero ciphertext reference, NOT the plaintext value
   if (encAmountHandle > 0n && encAmountHandle !== invoiceAmount) {
     pass('Amount is encrypted (handle != plaintext)')
-  } else if (encAmountHandle === invoiceAmount) {
+  } else if (encAmountHandle  invoiceAmount) {
     fail('Amount encryption', 'Handle equals plaintext - NOT encrypted!')
   } else {
     fail('Amount encryption', 'Handle is zero')
@@ -151,8 +151,8 @@ async function main() {
   if (encRecipientHandle > 0n) pass('Recipient is encrypted (non-zero handle)')
   else fail('Recipient encryption', 'Handle is zero')
 
-  // ========== TEST 4: Pay Invoice (Wallet B) ==========
-  console.log('\n========== TEST 4: Pay Invoice ==========')
+  // TEST 4: Pay Invoice (Wallet B)
+  console.log('\n TEST 4: Pay Invoice ')
 
   // Re-init CoFHE for wallet B
   await cofhejs.initializeWithEthers({
@@ -175,7 +175,7 @@ async function main() {
   console.log('  TX:', payTx.hash)
   const payReceipt = await payTx.wait()
 
-  if (payReceipt.status === 1) pass('Payment transaction succeeded')
+  if (payReceipt.status  1) pass('Payment transaction succeeded')
   else { fail('Payment', 'TX reverted'); return }
 
   // Check events
@@ -184,8 +184,8 @@ async function main() {
   for (const log of payReceipt.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoicePaid') paidEvent = true
-      if (parsed?.name === 'InvoiceSettled') settledEvent = true
+      if (parsed?.name  'InvoicePaid') paidEvent = true
+      if (parsed?.name  'InvoiceSettled') settledEvent = true
     } catch {}
   }
 
@@ -195,8 +195,8 @@ async function main() {
   if (settledEvent) pass('InvoiceSettled event (auto-settle)')
   else fail('InvoiceSettled', 'No auto-settle event')
 
-  // ========== TEST 5: Creator received ETH ==========
-  console.log('\n========== TEST 5: Creator ETH Balance ==========')
+  // TEST 5: Creator received ETH
+  console.log('\n TEST 5: Creator ETH Balance ')
 
   const creatorBalAfter = await ethers.provider.getBalance(walletA.address)
   const received = creatorBalAfter - creatorBalBefore
@@ -210,11 +210,11 @@ async function main() {
     fail('Creator ETH', `Expected ~${ethers.formatEther(invoiceAmount)}, got ${ethers.formatEther(received)}`)
   }
 
-  // ========== TEST 6: Invoice status = settled ==========
-  console.log('\n========== TEST 6: Post-payment State ==========')
+  // TEST 6: Invoice status = settled
+  console.log('\n TEST 6: Post-payment State ')
 
   const inv2 = await contractA.getInvoice(invoiceHash)
-  if (Number(inv2.status) === 1) pass('Status = settled')
+  if (Number(inv2.status)  1) pass('Status = settled')
   else fail('Status', `Expected 1 (settled), got ${inv2.status}`)
 
   const hasPaid = await contractA.checkHasPaid(invoiceHash, walletB.address)
@@ -222,23 +222,23 @@ async function main() {
   else fail('hasPaid', 'false')
 
   const payerCount = await contractA.getPayerCount(invoiceHash)
-  if (Number(payerCount) === 1) pass('Payer count = 1')
+  if (Number(payerCount)  1) pass('Payer count = 1')
   else fail('Payer count', `got ${payerCount}`)
 
   const paidList = await contractA.getPaidInvoices(walletB.address)
   if (paidList.includes(invoiceHash)) pass('Invoice in payer history')
   else fail('Paid invoices', 'Not in list')
 
-  // ========== TEST 7: Cancel (should fail — already settled) ==========
-  console.log('\n========== TEST 7: Cancel Settled (should revert) ==========')
+  // TEST 7: Cancel (should fail — already settled)
+  console.log('\n TEST 7: Cancel Settled (should revert) ')
   const reverted7 = await expectRevert(() =>
     contractA.cancelInvoice(invoiceHash, { gasLimit: 100000 })
   )
   if (reverted7) pass('Cancel settled correctly reverted')
   else fail('Cancel settled', 'Should have reverted')
 
-  // ========== TEST 8: Create + Cancel Invoice ==========
-  console.log('\n========== TEST 8: Create + Cancel ==========')
+  // TEST 8: Create + Cancel Invoice
+  console.log('\n TEST 8: Create + Cancel ')
 
   // Re-init for walletA
   await cofhejs.initializeWithEthers({
@@ -267,7 +267,7 @@ async function main() {
   for (const log of createReceipt2.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCreated') hash2 = parsed.args.invoiceHash
+      if (parsed?.name  'InvoiceCreated') hash2 = parsed.args.invoiceHash
     } catch {}
   }
 
@@ -282,7 +282,7 @@ async function main() {
   for (const log of cancelReceipt.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCancelled') cancelledEvent = true
+      if (parsed?.name  'InvoiceCancelled') cancelledEvent = true
     } catch {}
   }
 
@@ -290,11 +290,11 @@ async function main() {
   else fail('Cancel event', 'No event')
 
   const inv3 = await contractA.getInvoice(hash2)
-  if (Number(inv3.status) === 2) pass('Status = cancelled')
+  if (Number(inv3.status)  2) pass('Status = cancelled')
   else fail('Cancel status', `got ${inv3.status}`)
 
-  // ========== TEST 9: Non-creator cannot cancel ==========
-  console.log('\n========== TEST 9: Non-creator cancel (should revert) ==========')
+  // TEST 9: Non-creator cannot cancel
+  console.log('\n TEST 9: Non-creator cancel (should revert) ')
 
   await new Promise(r => setTimeout(r, 3000))
   const salt3 = ethers.hexlify(ethers.randomBytes(32))
@@ -308,7 +308,7 @@ async function main() {
   for (const log of receipt3.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCreated') hash3 = parsed.args.invoiceHash
+      if (parsed?.name  'InvoiceCreated') hash3 = parsed.args.invoiceHash
     } catch {}
   }
 
@@ -320,8 +320,8 @@ async function main() {
     else fail('Non-creator cancel', 'Should have reverted')
   }
 
-  // ========== TEST 10: Multipay — no auto-settle ==========
-  console.log('\n========== TEST 10: Multipay ==========')
+  // TEST 10: Multipay — no auto-settle
+  console.log('\n TEST 10: Multipay ')
 
   await new Promise(r => setTimeout(r, 3000))
   const salt4 = ethers.hexlify(ethers.randomBytes(32))
@@ -336,7 +336,7 @@ async function main() {
   for (const log of receipt4.logs) {
     try {
       const parsed = contractA.interface.parseLog({ topics: log.topics, data: log.data })
-      if (parsed?.name === 'InvoiceCreated') hash4 = parsed.args.invoiceHash
+      if (parsed?.name  'InvoiceCreated') hash4 = parsed.args.invoiceHash
     } catch {}
   }
 
@@ -357,7 +357,7 @@ async function main() {
   const payReceipt4 = await payTx4.wait()
 
   const inv4 = await contractA.getInvoice(hash4)
-  if (Number(inv4.status) === 0) pass('Multipay stays OPEN after partial payment')
+  if (Number(inv4.status)  0) pass('Multipay stays OPEN after partial payment')
   else fail('Multipay status', `Expected 0 (open), got ${inv4.status}`)
 
   // Settle manually
@@ -366,17 +366,17 @@ async function main() {
   const settleTx = await contractA.settleInvoice(hash4, { gasLimit: 200000, nonce: nonceA5 })
   await settleTx.wait()
   const inv4s = await contractA.getInvoice(hash4)
-  if (Number(inv4s.status) === 1) pass('Multipay settled by creator')
+  if (Number(inv4s.status)  1) pass('Multipay settled by creator')
   else fail('Settle', `Expected 1, got ${inv4s.status}`)
 
-  // ========== SUMMARY ==========
-  console.log('\n========================================')
+  // SUMMARY
+  console.log('\n')
   console.log(`  Passed: ${passed}`)
   console.log(`  Failed: ${failed}`)
   console.log(`  Total:  ${passed + failed}`)
-  console.log('========================================')
+  console.log('---')
 
-  if (failed === 0) {
+  if (failed  0) {
     console.log('\n\u2713 ALL FHE E2E TESTS PASSED')
   } else {
     console.log(`\n\u2717 ${failed} TEST(S) FAILED`)
