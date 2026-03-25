@@ -17,5 +17,5 @@ fhe_abi_temp.json
 public/tfhe_bg.wasm
 
 # IDE
-.claude/
 .vscode/
+.idea/
