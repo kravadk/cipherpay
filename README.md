@@ -320,36 +320,37 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 - [x] 100% on-chain data — no localStorage, no backend, no cache
 - [x] Vercel deployment with WASM support (COOP/COEP headers)
 
-### Wave 2 — Indexing & Receipts
+### Wave 2 — Stablecoin Payments & Receipts (Testnet)
+- [ ] Confidential USDC (cUSDC) payments via Privara SDK (`@reineira-os/sdk`) on Arbitrum Sepolia
+- [ ] FHE-encrypted escrow for stablecoin invoices — amount hidden even at token level
 - [ ] The Graph subgraph for InvoiceCreated, InvoicePaid, InvoiceSettled events
-- [ ] Encrypted threshold milestones — FHE.gte for multi-pay 25/50/75/100% without revealing amounts
 - [ ] Dual receipt system — payer and creator both get on-chain proof
 - [ ] Donation invoice type — open-ended amount, no target
-- [ ] Full FHE decryption for all flows — remove Simple contract fallback
 
-### Wave 3 — Automation & Scale
+### Wave 3 — Conditional Settlement & Automation (Testnet)
+- [ ] Conditional escrow via Privara Gate — release funds only when condition is met (delivery proof, oracle, deadline)
 - [ ] Recurring automation via Chainlink Automation (Keeper triggers payInvoice on schedule)
-- [ ] Batch single-tx payments — createBatchInvoice() for N recipients in one transaction
-- [ ] CipherDrop — Merkle airdrop with nullifier-based claims and encrypted amounts
-- [ ] Encrypted balance tracking per user (volume, count, avg) via InvoiceMetrics
+- [ ] Encrypted threshold milestones — FHE.gte for multi-pay 25/50/75/100% without revealing amounts
 - [ ] Subscription management UI for CipherSubscription contract
 
-### Wave 4 — Compliance & Disclosure
+### Wave 4 — Cross-chain & Insurance (Testnet)
+- [ ] Cross-chain invoice payments: Ethereum Sepolia → Arbitrum Sepolia via Circle CCTP v2
+- [ ] Payer pays from any supported chain, settlement happens on Arbitrum where FHE runs
+- [ ] Dispute resolution via Privara Insurance — encrypted coverage pools, automated refunds
 - [ ] Salary Proof — prove "income >= X" via FHE.gte → ebool without revealing amount
-- [ ] Audit packages — createSharing() permits with scoped, time-limited disclosure
-- [ ] Audit Center — manage audit reports, export encrypted proofs for accountants
-- [ ] Backend API for persistent preferences and webhook notifications
+- [ ] Audit packages — scoped, time-limited disclosure permits
 
-### Wave 5 — Platform & Monetization
-- [ ] Platform fee module — configurable % per invoice (encrypted via FHE, collected automatically)
-- [ ] Merchant SDK (@cipherpay/sdk) — npm package with Stripe-like API for integrations
+### Wave 5 — Platform & Mainnet (When CoFHE Mainnet Launches)
+- [ ] Mainnet deployment — pending CoFHE coprocessor availability on Ethereum/Arbitrum/Base mainnet
+- [ ] Platform fee module — configurable % per invoice, encrypted via FHE
+- [ ] Merchant SDK (@cipherpay/sdk) — npm package with Stripe-like API
 - [ ] Hosted invoice pages — merchants embed payment link, CipherPay handles encryption
-- [ ] Multi-chain deployment (pending CoFHE L2 support)
-- [ ] Mobile responsive polish for all pages
 - [ ] Security audit — reentrancy, gas optimization, access control
 
+> **Note:** Fhenix CoFHE currently operates on testnets only (Ethereum Sepolia, Arbitrum Sepolia, Base Sepolia). Mainnet deployment depends on CoFHE coprocessor going live on mainnet. All Wave 2-4 features are buildable and demonstrable on testnet today.
+
 ### Revenue Model
-- **Platform fee** — small % on each settled invoice (e.g. 0.3%), encrypted via FHE so individual fees are private, only aggregate platform revenue is visible via FHE.allowGlobal
+- **Platform fee** — small % on each settled invoice (e.g. 0.3%), encrypted via FHE so individual fees are private, only aggregate revenue visible via FHE.allowGlobal
 - **Merchant API** — paid tier for high-volume users (batch invoicing, webhooks, custom branding)
 - **Hosted pages** — SaaS model where merchants get a branded payment page without running their own frontend
 - **Premium features** — audit packages, advanced analytics, priority settlement

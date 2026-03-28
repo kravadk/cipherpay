@@ -123,20 +123,20 @@ export function Manifesto() {
             },
             {
               phase: 'Wave 2',
-              title: 'Full FHE + Indexing',
-              items: ['Full FHE decryption for all amounts', 'The Graph subgraph for event indexing', 'Encrypted threshold milestones', 'Dual receipt system'],
+              title: 'Stablecoin Payments',
+              items: ['Confidential USDC via Privara SDK', 'FHE-encrypted stablecoin escrow', 'The Graph subgraph for events', 'Dual receipt system'],
               active: false
             },
             {
               phase: 'Wave 3',
-              title: 'Automation + Distribution',
-              items: ['Recurring automation via Chainlink', 'Batch single-tx payments', 'CipherDrop (Merkle airdrop)', 'Subscription management UI'],
+              title: 'Conditional Settlement',
+              items: ['Conditional escrow via Privara Gate', 'Recurring automation via Chainlink', 'Encrypted threshold milestones', 'Subscription management UI'],
               active: false
             },
             {
               phase: 'Wave 4-5',
-              title: 'Compliance + Production',
-              items: ['Salary Proof (FHE range proof)', 'Audit packages with scoped disclosure', 'Platform fee module (encrypted)', 'Merchant SDK + hosted pages'],
+              title: 'Cross-chain + Mainnet',
+              items: ['Cross-chain payments via Circle CCTP', 'Dispute resolution with encrypted coverage', 'Platform fee module (encrypted)', 'Mainnet when CoFHE launches'],
               active: false
             }
           ].map((step, i) => (
