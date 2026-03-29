@@ -12,7 +12,7 @@
 
 Encrypted invoicing where amounts, recipients, and payment totals are hidden on-chain using Fully Homomorphic Encryption. The contract performs arithmetic on ciphertext — addition, comparison, conditional logic — without ever seeing plaintext. Only authorized parties decrypt via EIP-712 permits.
 
-[Live App](https://cipherpayy.vercel.app) · [FHE Contract](https://sepolia.etherscan.io/address/0x11B9d10bc7Cf5970dE860D8d52674329b7A791C4) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
+[Live App](https://cipherpayy.vercel.app) · [FHE Contract](https://sepolia.etherscan.io/address/0xBd81E4649A52583d497A0e27CBd47a6127Ecb267) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
 
 </div>
 
@@ -234,7 +234,7 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 
 | Contract | Address | Role |
 |----------|---------|------|
-| CipherPayFHE | [`0x11B9...91C4`](https://sepolia.etherscan.io/address/0x11B9d10bc7Cf5970dE860D8d52674329b7A791C4) | Primary — FHE encrypted amounts + eaddress + tax + analytics |
+| CipherPayFHE | [`0x11B9...91C4`](https://sepolia.etherscan.io/address/0xBd81E4649A52583d497A0e27CBd47a6127Ecb267) | Primary — FHE encrypted amounts + eaddress + tax + analytics |
 | CipherPaySimple | [`0xF3A1...713F`](https://sepolia.etherscan.io/address/0xF3A15EC0FAE753D6BEC3AAB3aEB2d72824c0713F) | Fallback — real ETH transfers, vesting escrow |
 | PaymentProof | [`0x54C2...7293`](https://sepolia.etherscan.io/address/0x54C22cdF7B65E64C75EeEF565E775503C7657293) | On-chain payment receipts with encrypted amounts |
 | SharedInvoice | [`0xd12e...B746`](https://sepolia.etherscan.io/address/0xd12eAcAD8FD0cd82894d819f4fb5e4E9168eB746) | Split bills with encrypted individual shares |
@@ -437,7 +437,7 @@ CipherPay is the most FHE-intensive project in this buildathon. We use **25+ dis
 - Shared invoice individual shares — each participant sees only their own
 - Platform aggregate volume — only owner decrypts via `FHE.allowGlobal()`
 
-**Verify on Etherscan:** Open the [FHE contract](https://sepolia.etherscan.io/address/0x11B9d10bc7Cf5970dE860D8d52674329b7A791C4) → click any transaction → Input Data shows ciphertext handles (not human-readable amounts). Internal transactions show real ETH moving through escrow.
+**Verify on Etherscan:** Open the [FHE contract](https://sepolia.etherscan.io/address/0xBd81E4649A52583d497A0e27CBd47a6127Ecb267) → click any transaction → Input Data shows ciphertext handles (not human-readable amounts). Internal transactions show real ETH moving through escrow.
 
 **Why this matters:** No other project in this wave combines encrypted amounts + encrypted recipients + encrypted tax + encrypted analytics + encrypted subscriptions + encrypted bill splitting in a single protocol with real ETH settlement.
 
