@@ -191,7 +191,6 @@ export function NewCipher() {
         fullMemo = `freq:${freqLabel}, cycles:${formData.maxCycles || '12'}, days:${freqDays}${formData.memo ? ', ' + formData.memo : ''}`;
       }
 
-      // Step 6: Submit to FHE contract — always encrypted
       let txHash: `0x${string}`;
 
       if (!encryptedAmount) {

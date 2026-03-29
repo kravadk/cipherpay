@@ -209,7 +209,7 @@ export function Pay() {
       try {
         const schedAbi = [{ name: 'getRecurringSchedule', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'intervalSeconds', type: 'uint256' }, { name: 'totalPeriods', type: 'uint256' }, { name: 'claimedPeriods', type: 'uint256' }, { name: 'startTimestamp', type: 'uint256' }, { name: 'perPeriodAmount', type: 'uint256' }, { name: 'claimableNow', type: 'uint256' }] }] as const;
         const sched = await publicClient.readContract({
-          address: CIPHERPAY_SIMPLE_ADDRESS, abi: schedAbi as any,
+          address: invoiceContract as `0x${string}`, abi: schedAbi as any,
           functionName: 'getRecurringSchedule', args: [hash as `0x${string}`],
         }) as any;
         setRecurringSchedule({
@@ -239,7 +239,7 @@ export function Pay() {
         inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [],
       }] as const;
       const tx = await writeContractAsync({
-        address: CIPHERPAY_SIMPLE_ADDRESS, abi: claimAbi as any,
+        address: invoiceContract as `0x${string}`, abi: claimAbi as any,
         functionName: 'claimRecurring', args: [hash as `0x${string}`],
       });
       addLog(`> Transaction: ${tx.slice(0, 14)}...`);
@@ -276,7 +276,7 @@ export function Pay() {
         inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_intervalSeconds', type: 'uint256' }, { name: '_totalPeriods', type: 'uint256' }], outputs: [],
       }] as const;
       const tx = await writeContractAsync({
-        address: CIPHERPAY_SIMPLE_ADDRESS, abi: depositAbi as any,
+        address: invoiceContract as `0x${string}`, abi: depositAbi as any,
         functionName: 'depositRecurring', args: [hash as `0x${string}`, BigInt(2592000), BigInt(3)],
         value: amount,
       });

@@ -52,6 +52,14 @@ contract CipherPayFHE {
     mapping(bytes32 => address[]) private _payers;
     mapping(bytes32 => mapping(address => uint256)) private _payerEth;
 
+    struct RecurringSchedule {
+        uint256 intervalSeconds;
+        uint256 totalPeriods;
+        uint256 claimedPeriods;
+        uint256 startTimestamp;
+    }
+    mapping(bytes32 => RecurringSchedule) private _recurring;
+
     euint64 public platformVolume;
     euint32 public platformInvoiceCount;
     bool private _platformInitialized;
@@ -66,6 +74,8 @@ contract CipherPayFHE {
     event InvoicePaid(bytes32 indexed invoiceHash, address indexed payer);
     event InvoiceSettled(bytes32 indexed invoiceHash);
     event InvoiceCancelled(bytes32 indexed invoiceHash);
+    event RecurringDeposited(bytes32 indexed invoiceHash, address indexed payer, uint256 totalAmount, uint256 periods, uint256 interval);
+    event RecurringClaimed(bytes32 indexed invoiceHash, address indexed creator, uint256 amount, uint256 periodsClaimedSoFar);
 
     function createInvoice(
         InEuint64 calldata _encryptedAmount,
@@ -231,6 +241,100 @@ contract CipherPayFHE {
         _ethHeld[_invoiceHash] = 0;
 
         emit InvoiceCancelled(_invoiceHash);
+    }
+
+    function depositRecurring(
+        bytes32 _invoiceHash,
+        uint256 _intervalSeconds,
+        uint256 _totalPeriods
+    ) external payable {
+        Invoice storage inv = invoices[_invoiceHash];
+        require(inv.creator != address(0), "Invoice not found");
+        require(inv.invoiceType == TYPE_RECURRING, "Not recurring");
+        require(inv.status == STATUS_OPEN, "Not open");
+        require(_totalPeriods > 0, "At least 1 period");
+        require(_intervalSeconds >= 1 hours, "Interval too short");
+        require(msg.value > 0, "Must send ETH");
+        require(_recurring[_invoiceHash].startTimestamp == 0, "Already deposited");
+        if (inv.hasRecipient) {
+            require(msg.sender == inv.recipient, "Not authorized");
+        }
+
+        _recurring[_invoiceHash] = RecurringSchedule({
+            intervalSeconds: _intervalSeconds,
+            totalPeriods: _totalPeriods,
+            claimedPeriods: 0,
+            startTimestamp: block.timestamp
+        });
+
+        _ethHeld[_invoiceHash] = msg.value;
+        if (!hasPaid[_invoiceHash][msg.sender]) {
+            hasPaid[_invoiceHash][msg.sender] = true;
+            _payers[_invoiceHash].push(msg.sender);
+            paidInvoices[msg.sender].push(_invoiceHash);
+            inv.payerCount++;
+        }
+        _payerEth[_invoiceHash][msg.sender] += msg.value;
+
+        emit RecurringDeposited(_invoiceHash, msg.sender, msg.value, _totalPeriods, _intervalSeconds);
+    }
+
+    function claimRecurring(bytes32 _invoiceHash) external {
+        Invoice storage inv = invoices[_invoiceHash];
+        require(inv.creator != address(0), "Invoice not found");
+        require(inv.invoiceType == TYPE_RECURRING, "Not recurring");
+        require(inv.status == STATUS_OPEN, "Not open");
+        require(msg.sender == inv.creator, "Only creator");
+
+        RecurringSchedule storage sched = _recurring[_invoiceHash];
+        require(sched.startTimestamp > 0, "Not deposited yet");
+
+        uint256 elapsed = block.timestamp - sched.startTimestamp;
+        uint256 unlockedPeriods = elapsed / sched.intervalSeconds;
+        if (unlockedPeriods > sched.totalPeriods) unlockedPeriods = sched.totalPeriods;
+
+        uint256 claimable = unlockedPeriods - sched.claimedPeriods;
+        require(claimable > 0, "Nothing to claim yet");
+
+        uint256 totalDeposit = _ethHeld[_invoiceHash];
+        uint256 perPeriod = totalDeposit / sched.totalPeriods;
+        uint256 payout;
+
+        if (unlockedPeriods == sched.totalPeriods) {
+            payout = totalDeposit - (sched.claimedPeriods * perPeriod);
+        } else {
+            payout = claimable * perPeriod;
+        }
+
+        sched.claimedPeriods = unlockedPeriods;
+
+        if (sched.claimedPeriods == sched.totalPeriods) {
+            inv.status = STATUS_SETTLED;
+            _ethHeld[_invoiceHash] = 0;
+            emit InvoiceSettled(_invoiceHash);
+        }
+
+        (bool sent, ) = payable(inv.creator).call{value: payout}("");
+        require(sent, "ETH transfer failed");
+
+        emit RecurringClaimed(_invoiceHash, inv.creator, payout, sched.claimedPeriods);
+    }
+
+    function getRecurringSchedule(bytes32 _invoiceHash) external view returns (
+        uint256 intervalSeconds, uint256 totalPeriods, uint256 claimedPeriods,
+        uint256 startTimestamp, uint256 perPeriodAmount, uint256 claimableNow
+    ) {
+        RecurringSchedule storage sched = _recurring[_invoiceHash];
+        uint256 totalDeposit = _ethHeld[_invoiceHash];
+        uint256 perPeriod = sched.totalPeriods > 0 ? totalDeposit / sched.totalPeriods : 0;
+        uint256 unlocked = 0;
+        uint256 claimableCount = 0;
+        if (sched.startTimestamp > 0) {
+            unlocked = (block.timestamp - sched.startTimestamp) / sched.intervalSeconds;
+            if (unlocked > sched.totalPeriods) unlocked = sched.totalPeriods;
+            claimableCount = unlocked - sched.claimedPeriods;
+        }
+        return (sched.intervalSeconds, sched.totalPeriods, sched.claimedPeriods, sched.startTimestamp, perPeriod, claimableCount);
     }
 
     receive() external payable {}

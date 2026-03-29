@@ -20,7 +20,7 @@ async function main() {
   console.log('Balance B:', ethers.formatEther(balB), 'ETH')
 
   // Contract
-  const CONTRACT = '0xBd81E4649A52583d497A0e27CBd47a6127Ecb267'
+  const CONTRACT = '0x626c1661cF0b72E47E9FcA0BF96d0D1A70d42852'
   const abi = [
     'function createInvoice(tuple(uint256 ctHash, uint8 securityZone, uint8 utype, bytes signature) _encryptedAmount, tuple(uint256 ctHash, uint8 securityZone, uint8 utype, bytes signature) _encryptedRecipient, bool _hasRecipient, uint8 _invoiceType, uint256 _deadline, uint256 _unlockBlock, bytes32 _salt, string _memo) external returns (bytes32)',
     'function payInvoice(bytes32 _invoiceHash, tuple(uint256 ctHash, uint8 securityZone, uint8 utype, bytes signature) _encryptedPayment) external payable',
