@@ -176,7 +176,7 @@ export function Pay() {
   const isAuthorizedPayer = !recipientRestricted || invoice?.recipient?.toLowerCase() === address?.toLowerCase();
   const isCreator = invoice?.creator?.toLowerCase() === address?.toLowerCase();
 
-  // Vesting lock check
+  const isRecurring = invoice?.invoiceType === 2;
   const isVesting = invoice?.invoiceType === 3;
   const unlockBlock = invoice?.unlockBlock ? Number(invoice.unlockBlock) : 0;
   const [currentBlock, setCurrentBlock] = useState(0);
@@ -200,6 +200,104 @@ export function Pay() {
   const targetNum = collected ? parseFloat(collected.target) : 0;
   const progressPct = targetNum > 0 ? Math.min(100, (collectedNum / targetNum) * 100) : 0;
   const remaining = Math.max(0, targetNum - collectedNum);
+
+  // Recurring state
+  const [recurringSchedule, setRecurringSchedule] = useState<any>(null);
+  useEffect(() => {
+    if (!publicClient || !isRecurring || !hash) return;
+    const fetchSchedule = async () => {
+      try {
+        const schedAbi = [{ name: 'getRecurringSchedule', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: 'intervalSeconds', type: 'uint256' }, { name: 'totalPeriods', type: 'uint256' }, { name: 'claimedPeriods', type: 'uint256' }, { name: 'startTimestamp', type: 'uint256' }, { name: 'perPeriodAmount', type: 'uint256' }, { name: 'claimableNow', type: 'uint256' }] }] as const;
+        const sched = await publicClient.readContract({
+          address: CIPHERPAY_SIMPLE_ADDRESS, abi: schedAbi as any,
+          functionName: 'getRecurringSchedule', args: [hash as `0x${string}`],
+        }) as any;
+        setRecurringSchedule({
+          intervalSeconds: Number(sched[0] || sched.intervalSeconds),
+          totalPeriods: Number(sched[1] || sched.totalPeriods),
+          claimedPeriods: Number(sched[2] || sched.claimedPeriods),
+          startTimestamp: Number(sched[3] || sched.startTimestamp),
+          perPeriodAmount: sched[4] || sched.perPeriodAmount,
+          claimableNow: Number(sched[5] || sched.claimableNow),
+        });
+      } catch { setRecurringSchedule(null); }
+    };
+    fetchSchedule();
+  }, [publicClient, isRecurring, hash, payStatus]);
+
+  const isRecurringDeposited = recurringSchedule && recurringSchedule.totalPeriods > 0;
+
+  const handleClaimRecurring = async () => {
+    if (!address || !hash || !publicClient) return;
+    setPayStatus('paying');
+    setPayLogs([]);
+    setPayError(null);
+    try {
+      addLog('> Claiming recurring period...');
+      const claimAbi = [{
+        name: 'claimRecurring', type: 'function', stateMutability: 'nonpayable',
+        inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [],
+      }] as const;
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS, abi: claimAbi as any,
+        functionName: 'claimRecurring', args: [hash as `0x${string}`],
+      });
+      addLog(`> Transaction: ${tx.slice(0, 14)}...`);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
+      if (receipt.status === 'reverted') throw new Error('Transaction reverted');
+      addLog(`> ✓ Period claimed in block ${receipt.blockNumber}`);
+      setTxHash(tx);
+      setPayStatus('success');
+      addToast('success', 'Recurring period claimed!');
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Claim failed';
+      let userMsg = msg;
+      if (msg.includes('User rejected') || msg.includes('denied')) userMsg = 'Transaction cancelled';
+      else if (msg.includes('Not deposited')) userMsg = 'Payer has not deposited escrow yet';
+      else if (msg.includes('No claimable')) userMsg = 'No periods claimable yet — wait for next interval';
+      else if (msg.includes('Only creator')) userMsg = 'Only the invoice creator can claim';
+      addLog(`> ✗ ${userMsg}`);
+      setPayError(userMsg);
+      setPayStatus('error');
+      addToast('error', userMsg);
+    }
+  };
+
+  const handleDepositRecurring = async () => {
+    if (!address || !hash || !publicClient || !payAmount) return;
+    setPayStatus('paying');
+    setPayLogs([]);
+    setPayError(null);
+    try {
+      const amount = parseEther(payAmount);
+      addLog(`> Depositing ${payAmount} ETH into recurring escrow...`);
+      const depositAbi = [{
+        name: 'depositRecurring', type: 'function', stateMutability: 'payable',
+        inputs: [{ name: '_invoiceHash', type: 'bytes32' }, { name: '_intervalSeconds', type: 'uint256' }, { name: '_totalPeriods', type: 'uint256' }], outputs: [],
+      }] as const;
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_SIMPLE_ADDRESS, abi: depositAbi as any,
+        functionName: 'depositRecurring', args: [hash as `0x${string}`, BigInt(2592000), BigInt(3)],
+        value: amount,
+      });
+      addLog(`> Transaction: ${tx.slice(0, 14)}...`);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
+      if (receipt.status === 'reverted') throw new Error('Transaction reverted');
+      addLog(`> ✓ Escrow deposited in block ${receipt.blockNumber}`);
+      setTxHash(tx);
+      setPayStatus('success');
+      addToast('success', `Recurring escrow deposited — ${payAmount} ETH`);
+    } catch (err: any) {
+      const msg = err.shortMessage || err.message || 'Deposit failed';
+      let userMsg = msg;
+      if (msg.includes('User rejected') || msg.includes('denied')) userMsg = 'Transaction cancelled';
+      else if (msg.includes('Already deposited')) userMsg = 'Escrow already deposited for this invoice';
+      addLog(`> ✗ ${userMsg}`);
+      setPayError(userMsg);
+      setPayStatus('error');
+      addToast('error', userMsg);
+    }
+  };
 
   const handleClaimVesting = async () => {
     if (!address || !hash || !publicClient) return;
@@ -559,7 +657,22 @@ export function Pay() {
                           </div>
                         )}
                       </>)}
-                      {isVesting ? (
+                      {isRecurring ? (
+                        isCreator ? (
+                          <Button className="w-full h-14 text-lg" onClick={handleClaimRecurring}
+                            disabled={!isRecurringDeposited || (recurringSchedule?.claimableNow === 0)}>
+                            {!isRecurringDeposited ? 'Waiting for payer deposit'
+                              : recurringSchedule?.claimableNow === 0 ? 'No periods claimable yet'
+                              : `Claim Period (${recurringSchedule?.claimableNow} available) →`}
+                          </Button>
+                        ) : (
+                          <Button className="w-full h-14 text-lg" onClick={handleDepositRecurring}
+                            disabled={isRecurringDeposited || !payAmount || parseFloat(payAmount) <= 0}>
+                            {isRecurringDeposited ? 'Escrow already deposited'
+                              : `Deposit ${payAmount || '...'} ETH into escrow →`}
+                          </Button>
+                        )
+                      ) : isVesting ? (
                         <Button className="w-full h-14 text-lg" onClick={handleClaimVesting}
                           disabled={isLocked || !isAuthorizedPayer}>
                           {isLocked ? `Locked — ${blocksRemaining} blocks (~${Math.ceil(blocksRemaining * 12 / 60)} min)`
