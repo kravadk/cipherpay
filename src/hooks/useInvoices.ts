@@ -85,15 +85,15 @@ export function useInvoices() {
           if (!data) return null;
 
           const creator = data[0] as string;
-          const secondField = data[1];
-          const isFheFormat = typeof secondField === 'boolean';
-          const recipient = isFheFormat ? '0x0000000000000000000000000000000000000000' : (data[1] as string);
-          const invoiceType = Number(data[2]);
-          const status = Number(data[3]);
-          const deadline = Number(data[4]);
-          const createdAt = Number(data[5]);
-          const createdBlock = Number(data[6]);
-          const unlockBlock = Number(data[7]);
+          const recipient = data[1] as string;
+          const hasRecipientField = data[2];
+          const isFheFormat = typeof hasRecipientField === 'boolean';
+          const invoiceType = isFheFormat ? Number(data[3]) : Number(data[2]);
+          const status = isFheFormat ? Number(data[4]) : Number(data[3]);
+          const deadline = isFheFormat ? Number(data[5]) : Number(data[4]);
+          const createdAt = isFheFormat ? Number(data[6]) : Number(data[5]);
+          const createdBlock = isFheFormat ? Number(data[7]) : Number(data[6]);
+          const unlockBlock = isFheFormat ? Number(data[8]) : Number(data[7]);
 
           const typeStr = (INVOICE_TYPE_MAP[invoiceType] || 'standard') as Invoice['type'];
           const statusStr = (INVOICE_STATUS_MAP[status] || 'open') as Invoice['status'];

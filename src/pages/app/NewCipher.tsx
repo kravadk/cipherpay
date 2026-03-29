@@ -239,7 +239,7 @@ export function NewCipher() {
         address: CIPHERPAY_ADDRESS,
         abi: CIPHERPAY_ABI as any,
         functionName: 'createInvoice',
-        args: [encAmountTuple, encRecipientTuple, hasRecipient, typeToUint8(type), deadline, unlockBlock, salt, fullMemo],
+        args: [encAmountTuple, encRecipientTuple, recipient, hasRecipient, typeToUint8(type), deadline, unlockBlock, salt, fullMemo],
       });
 
       addLog(`> Transaction submitted: ${txHash.slice(0, 14)}...`);

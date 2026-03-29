@@ -43,6 +43,7 @@ export const CIPHERPAY_ABI = [
     inputs: [
       { name: '_encryptedAmount', ...InEuint64Tuple },
       { name: '_encryptedRecipient', ...InEaddressTuple },
+      { name: '_recipient', type: 'address' },
       { name: '_hasRecipient', type: 'bool' },
       { name: '_invoiceType', type: 'uint8' },
       { name: '_deadline', type: 'uint256' },
@@ -87,6 +88,7 @@ export const CIPHERPAY_ABI = [
     inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
     outputs: [
       { name: 'creator', type: 'address' },
+      { name: 'recipient', type: 'address' },
       { name: 'hasRecipient', type: 'bool' },
       { name: 'invoiceType', type: 'uint8' },
       { name: 'status', type: 'uint8' },

@@ -21,6 +21,7 @@ contract CipherPayFHE {
 
     struct Invoice {
         address creator;
+        address recipient;
         eaddress encryptedRecipient;
         bool hasRecipient;
         uint8 invoiceType;
@@ -69,6 +70,7 @@ contract CipherPayFHE {
     function createInvoice(
         InEuint64 calldata _encryptedAmount,
         InEaddress calldata _encryptedRecipient,
+        address _recipient,
         bool _hasRecipient,
         uint8 _invoiceType,
         uint256 _deadline,
@@ -96,6 +98,7 @@ contract CipherPayFHE {
 
         invoices[invoiceHash] = Invoice({
             creator: msg.sender,
+            recipient: _recipient,
             encryptedRecipient: encRecipient,
             hasRecipient: _hasRecipient,
             invoiceType: _invoiceType,
@@ -136,8 +139,7 @@ contract CipherPayFHE {
         require(inv.status == STATUS_OPEN, "Not open");
 
         if (inv.hasRecipient) {
-            ebool isAuthorized = FHE.eq(inv.encryptedRecipient, FHE.asEaddress(msg.sender));
-            FHE.allowThis(isAuthorized);
+            require(msg.sender == inv.recipient, "Not authorized payer");
         }
         if (inv.deadline > 0) {
             require(block.timestamp <= inv.deadline, "Deadline passed");
@@ -258,11 +260,11 @@ contract CipherPayFHE {
     }
 
     function getInvoice(bytes32 _invoiceHash) external view returns (
-        address creator, bool hasRecipient, uint8 invoiceType, uint8 status,
+        address creator, address recipient, bool hasRecipient, uint8 invoiceType, uint8 status,
         uint256 deadline, uint256 createdAt, uint256 createdBlock, uint256 unlockBlock
     ) {
         Invoice storage inv = invoices[_invoiceHash];
-        return (inv.creator, inv.hasRecipient, inv.invoiceType, inv.status,
+        return (inv.creator, inv.recipient, inv.hasRecipient, inv.invoiceType, inv.status,
                 inv.deadline, inv.createdAt, inv.createdBlock, inv.unlockBlock);
     }
 

@@ -85,21 +85,22 @@ export function Pay() {
         }
 
         const creator = data[0] as string;
+        const recipient = data[1] as string;
 
-        // FHE contract returns (address, bool, uint8, uint8, ...)
+        // FHE contract returns (address, address, bool, uint8, uint8, ...)
         // Simple contract returns (address, address, uint8, uint8, ...)
-        const secondField = data[1];
-        const isFheFormat = typeof secondField === 'boolean';
+        const thirdField = data[2];
+        const isFheFormat = typeof thirdField === 'boolean';
         const invoiceData = {
           creator,
-          recipient: isFheFormat ? '0x0000000000000000000000000000000000000000' : (data[1] as string),
-          hasRecipient: isFheFormat ? secondField : (data[1] as string) !== '0x0000000000000000000000000000000000000000',
-          invoiceType: Number(data[2]),
-          status: Number(data[3]),
-          deadline: BigInt(data[4] || 0),
-          createdAt: BigInt(data[5] || 0),
-          createdBlock: BigInt(data[6] || 0),
-          unlockBlock: BigInt(data[7] || 0),
+          recipient,
+          hasRecipient: isFheFormat ? thirdField as boolean : recipient !== '0x0000000000000000000000000000000000000000',
+          invoiceType: isFheFormat ? Number(data[3]) : Number(data[2]),
+          status: isFheFormat ? Number(data[4]) : Number(data[3]),
+          deadline: BigInt((isFheFormat ? data[5] : data[4]) || 0),
+          createdAt: BigInt((isFheFormat ? data[6] : data[5]) || 0),
+          createdBlock: BigInt((isFheFormat ? data[7] : data[6]) || 0),
+          unlockBlock: BigInt((isFheFormat ? data[8] : data[7]) || 0),
         };
         setInvoice(invoiceData);
 
