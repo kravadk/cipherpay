@@ -189,6 +189,97 @@ export const CIPHERPAY_ABI = [
       { name: 'decrypted', type: 'bool' },
     ],
   },
+  // ── Wave 2: Shielded Balance Pool ────────────────────────────────────────
+  // Pre-fund ETH bucket so actual pay tx has msg.value = 0
+  {
+    name: 'depositShielded',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    name: 'withdrawShielded',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_amount', type: 'uint256' }],
+    outputs: [],
+  },
+  // Pay using pre-funded shielded balance (msg.value = 0)
+  {
+    name: 'payInvoiceShielded',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_invoiceHash', type: 'bytes32' },
+      { name: '_encryptedPayment', ...InEuint64Tuple },
+      { name: '_maxDebit', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  // Read shielded balance for an address
+  {
+    name: 'shieldedBalance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+
+  // ── Wave 2: Anonymous Invoice Claim ──────────────────────────────────────
+  // Enable anon mode on an existing invoice (creator only)
+  {
+    name: 'enableAnonClaim',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
+    outputs: [],
+  },
+  // Pay anonymously — nullifier stored instead of address
+  {
+    name: 'claimAnonymously',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [
+      { name: '_invoiceHash', type: 'bytes32' },
+      { name: '_encryptedPayment', ...InEuint64Tuple },
+      { name: '_nullifier', type: 'bytes32' },
+    ],
+    outputs: [],
+  },
+  // Creator sweeps anon pool after invoice is done
+  {
+    name: 'sweepAnonPool',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
+    outputs: [],
+  },
+  // Check if anon claim is enabled for an invoice
+  {
+    name: 'anonEnabled',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  // Check if a nullifier was already used
+  {
+    name: 'anonNullifierUsed',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  // Read anon ETH pool balance for an invoice
+  {
+    name: 'anonEthPool',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: '', type: 'bytes32' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+
   // Events
   {
     name: 'InvoiceCreated',
@@ -221,6 +312,35 @@ export const CIPHERPAY_ABI = [
     type: 'event',
     inputs: [{ name: 'invoiceHash', type: 'bytes32', indexed: true }],
   },
+  {
+    name: 'ShieldedDeposit',
+    type: 'event',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'ShieldedWithdraw',
+    type: 'event',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'AnonInvoiceEnabled',
+    type: 'event',
+    inputs: [{ name: 'invoiceHash', type: 'bytes32', indexed: true }],
+  },
+  {
+    name: 'AnonClaimSubmitted',
+    type: 'event',
+    inputs: [
+      { name: 'invoiceHash', type: 'bytes32', indexed: true },
+      { name: 'nullifier', type: 'bytes32', indexed: true },
+    ],
+  },
 ] as const;
 
 // Simple contract ABI extensions (pause, resume, claim, amount queries)
@@ -246,7 +366,7 @@ export const INVOICE_TYPE_MAP: Record<number, string> = {
   1: 'multi-pay',
   2: 'recurring',
   3: 'vesting',
-  4: 'batch',
+  4: 'donation',
 };
 
 export const INVOICE_STATUS_MAP: Record<number, string> = {
