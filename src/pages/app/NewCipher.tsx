@@ -18,7 +18,7 @@ import { DatePicker } from '../../components/DatePicker';
 import { useCofhe } from '../../hooks/useCofhe';
 import { isValidAmount, isValidAddress } from '../../utils/validation';
 
-type CipherType = 'standard' | 'multi-pay' | 'recurring' | 'vesting' | 'batch';
+type CipherType = 'standard' | 'multi-pay' | 'recurring' | 'vesting' | 'batch' | 'donation';
 
 interface FormData {
   amount: string;
@@ -49,6 +49,9 @@ export function NewCipher() {
   const [deployLogs, setDeployLogs] = useState<string[]>([]);
   const [deployedHash, setDeployedHash] = useState<string | null>(null);
   const [deployedTxHash, setDeployedTxHash] = useState<string | null>(null);
+  const [enableAnon, setEnableAnon] = useState(false);
+  const [anonEnabled, setAnonEnabled] = useState(false);
+  const [enablingAnon, setEnablingAnon] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Invoice data comes only from blockchain — no local store
@@ -63,16 +66,17 @@ export function NewCipher() {
   const disabledTypes = new Set<CipherType>(['vesting', 'batch']);
   const typeWave: Record<string, string> = { vesting: 'W2', batch: 'W3' };
 
-  const types: { id: CipherType; label: string; icon: any; color: string }[] = [
+  const types: { id: CipherType; label: string; icon: any; color: string; desc?: string }[] = [
     { id: 'standard', label: 'Standard', icon: Shield, color: 'text-primary' },
     { id: 'multi-pay', label: 'Multi Pay', icon: Zap, color: 'text-secondary' },
     { id: 'recurring', label: 'Recurring', icon: Repeat, color: 'text-purple-500' },
     { id: 'vesting', label: 'Vesting', icon: Lock, color: 'text-yellow-500' },
     { id: 'batch', label: 'Batch', icon: History, color: 'text-blue-500' },
+    { id: 'donation', label: 'Donation', icon: Eye, color: 'text-pink-500', desc: 'Open-ended, no target — creator sweeps anytime' },
   ];
 
   const typeToUint8 = (t: CipherType): number => {
-    const map: Record<CipherType, number> = { 'standard': 0, 'multi-pay': 1, 'recurring': 2, 'vesting': 3, 'batch': 4 };
+    const map: Record<CipherType, number> = { 'standard': 0, 'multi-pay': 1, 'recurring': 2, 'vesting': 3, 'batch': 0, 'donation': 4 };
     return map[t];
   };
 
@@ -305,6 +309,24 @@ export function NewCipher() {
       // No local store — invoice will be fetched from blockchain on Dashboard
       setDeployedHash(invoiceHash);
       setDeployedTxHash(txHash);
+
+      // Optional: enable anonymous claim mode immediately after creation
+      if (enableAnon) {
+        addLog('> Enabling anonymous claim mode...');
+        try {
+          const anonTx = await writeContractAsync({
+            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+            functionName: 'enableAnonClaim',
+            args: [invoiceHash as `0x${string}`],
+          });
+          await publicClient!.waitForTransactionReceipt({ hash: anonTx });
+          addLog('> ✓ Anonymous claim enabled — payers can now pay without revealing identity');
+          setAnonEnabled(true);
+        } catch (anonErr: any) {
+          addLog(`> ⚠ Could not enable anon claim: ${anonErr?.shortMessage || anonErr?.message}`);
+        }
+      }
+
       setIsDeploying(false);
       setStep(4);
       addToast('success', 'Invoice deployed to Ethereum Sepolia!');
@@ -857,7 +879,24 @@ export function NewCipher() {
                 </div>
               )}
 
-              <div className="pt-8 flex gap-4 mt-auto">
+              {/* Anonymous claim toggle — shown for non-restricted invoice types */}
+              {type !== 'vesting' && type !== 'recurring' && (
+                <label className="flex items-center gap-3 px-4 py-3 bg-surface-2 border border-border-default rounded-xl cursor-pointer hover:border-primary/30 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={enableAnon}
+                    onChange={e => setEnableAnon(e.target.checked)}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-white">Enable anonymous claim</p>
+                    <p className="text-xs text-text-muted">Payers can pay without their address being recorded on-chain</p>
+                  </div>
+                  <span className="ml-auto text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">NEW</span>
+                </label>
+              )}
+
+              <div className="pt-4 flex gap-4 mt-auto">
                 <Button variant="outline" className="flex-1" onClick={() => setStep(2)} disabled={isDeploying}>
                   <ArrowLeft className="w-5 h-5 mr-2" /> Back
                 </Button>

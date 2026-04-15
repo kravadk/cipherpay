@@ -86,6 +86,20 @@ export function useCofhe() {
     return clientRef.current.decryptForView(ctHash, fheType).withPermit().execute();
   }, []);
 
+  /**
+   * decryptForTx — for on-chain publishable decryption (new API, April 2026).
+   * Returns { ctHash, decryptedValue, signature } from the Threshold Network.
+   * Pass the result to a contract function that calls FHE.publishDecryptResult.
+   * Use withPermit=false when the handle has FHE.allowPublic set (e.g. paidCheck).
+   */
+  const decryptForTx = useCallback(async (ctHash: bigint, withPermit = false) => {
+    if (!clientRef.current) throw new Error('CofheClient not initialized');
+    const builder = clientRef.current.decryptForTx(ctHash);
+    return withPermit
+      ? builder.withPermit().execute()
+      : builder.withoutPermit().execute();
+  }, []);
+
   const getOrCreateSelfPermit = useCallback(async () => {
     if (!clientRef.current) throw new Error('CofheClient not initialized');
     return clientRef.current.permits.getOrCreateSelfPermit();
@@ -122,6 +136,7 @@ export function useCofhe() {
     error,
     encrypt,
     decrypt,
+    decryptForTx,
     getOrCreateSelfPermit,
     removeActivePermit,
     createFreshPermit,

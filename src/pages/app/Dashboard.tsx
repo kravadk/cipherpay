@@ -14,6 +14,7 @@ import { useContractStatus } from '../../hooks/useContractStatus';
 import { useInvoices } from '../../hooks/useInvoices';
 import { useCofhe } from '../../hooks/useCofhe';
 import { SideDrawer } from '../../components/SideDrawer';
+import { ShieldedBalance } from '../../components/ShieldedBalance';
 
 function CountUpAnimation({ value, duration = 1500 }: { value: number; duration?: number }) {
   const [displayed, setDisplayed] = useState(0);
@@ -253,6 +254,29 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Shielded Balance — prominent before CTAs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ShieldedBalance />
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">Anonymous Claim</span>
+              <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">NEW</span>
+            </div>
+            <p className="text-xs text-text-muted">Pay invoices without recording your address on-chain. Creator sees only a nullifier hash.</p>
+          </div>
+          <div className="space-y-2 text-[10px] text-text-secondary">
+            <div className="flex gap-2"><span className="text-primary">✓</span> Address NOT stored in contract</div>
+            <div className="flex gap-2"><span className="text-primary">✓</span> No InvoicePaid event emitted</div>
+            <div className="flex gap-2"><span className="text-primary">✓</span> Nullifier replay protection</div>
+          </div>
+          <Link to="/app/anon-claim"
+            className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-2 border border-border-default text-xs font-bold text-text-secondary hover:text-white hover:border-primary/50 transition-colors">
+            Pay anonymously →
+          </Link>
+        </div>
+      </div>
+
       {/* CTA Buttons */}
       <div className="flex flex-col md:flex-row gap-6">
         <Link to="/app/new-cipher" className="flex-1">
@@ -260,11 +284,19 @@ export function Dashboard() {
             GET PAID PRIVATELY <ArrowUpRight className="w-6 h-6" />
           </Button>
         </Link>
-        <Link to="/app/cipher-drop" className="flex-1">
-          <Button variant="secondary" className="w-full h-[52px] text-lg gap-3">
+        <div className="flex-1 relative group" title="Cipher Drop ships in Wave 3">
+          <Button
+            variant="secondary"
+            className="w-full h-[52px] text-lg gap-3 opacity-50 cursor-not-allowed"
+            onClick={(e: any) => e.preventDefault()}
+            disabled
+          >
             DISTRIBUTE PRIVATELY <ArrowDownRight className="w-6 h-6" />
           </Button>
-        </Link>
+          <span className="absolute top-1 right-2 text-[9px] font-bold text-text-muted bg-surface-3 px-1.5 py-0.5 rounded uppercase tracking-wider">
+            W3
+          </span>
+        </div>
       </div>
 
       {/* Balance removed — shown in sidebar */}

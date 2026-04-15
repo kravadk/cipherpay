@@ -1,9 +1,40 @@
 import { motion } from 'framer-motion';
-import { Code, ExternalLink, Copy, Terminal, Globe, Shield } from 'lucide-react';
+import { Code, ExternalLink, Copy, Terminal, Globe, Shield, ShoppingCart } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '../../components/Button';
 import { useToastStore } from '../../components/ToastContainer';
 import { CIPHERPAY_ADDRESS, CIPHERPAY_FHE_ADDRESS, CIPHERPAY_SIMPLE_ADDRESS } from '../../config/contract';
 import { FHENIX_EXPLORER_URL } from '../../config/fhenix';
+
+const CHECKOUT_EMBED_SNIPPET = `<!-- 1. Add the CipherPay embed script -->
+<script src="https://cipherpayy.vercel.app/cipherpay.js"
+  data-invoice="0xYOUR_INVOICE_HASH_HERE"
+  data-theme="dark">
+</script>
+
+<!-- 2. Add a pay button anywhere on your page -->
+<button onclick="CipherPay.open()">
+  Pay with CipherPay
+</button>
+
+<!-- 3. Listen for payment confirmation -->
+<script>
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'cipherpay:paid') {
+      console.log('Payment tx:', e.data.tx);
+      // Unlock content, confirm order, etc.
+    }
+  });
+</script>`;
+
+const CHECKOUT_INLINE_SNIPPET = `<!-- Inline mode — embed directly in your page -->
+<div id="my-payment-widget"></div>
+
+<script src="https://cipherpayy.vercel.app/cipherpay.js"
+  data-invoice="0xYOUR_INVOICE_HASH_HERE"
+  data-mode="inline"
+  data-target="my-payment-widget">
+</script>`;
 
 const CODE_SNIPPETS = [
   {
@@ -101,6 +132,9 @@ FHE.allow(amount, recipient);   // Specific address`,
 
 export function Build() {
   const { addToast } = useToastStore();
+  const [checkoutSnippet, setCheckoutSnippet] = useState<'modal' | 'inline'>('modal');
+  const [iframeHash, setIframeHash] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
 
   // Smart contract functions (not REST — these are on-chain calls)
   const contractFunctions = [
@@ -261,6 +295,115 @@ export function Build() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Checkout Embed */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <ShoppingCart className="w-5 h-5 text-text-secondary" />
+          <h2 className="text-xl font-bold text-white">Checkout Embed</h2>
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">NEW · Wave 2</span>
+        </div>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          Accept private payments on any website with one script tag. The checkout runs in a sandboxed iframe — no SDK required, no wallet SDK on your page. FHE encryption happens inside the iframe; your page only sees the <code className="text-primary text-xs">cipherpay:paid</code> event.
+        </p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Snippet tabs */}
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              {(['modal', 'inline'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setCheckoutSnippet(mode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    checkoutSnippet === mode
+                      ? 'bg-primary text-black'
+                      : 'bg-surface-2 text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  {mode === 'modal' ? 'Modal (default)' : 'Inline embed'}
+                </button>
+              ))}
+            </div>
+            <div className="relative group">
+              <div className="relative bg-black border border-border-default rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-border-default bg-surface-1">
+                  <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
+                    {checkoutSnippet === 'modal' ? 'Modal Mode — HTML' : 'Inline Mode — HTML'}
+                  </span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(checkoutSnippet === 'modal' ? CHECKOUT_EMBED_SNIPPET : CHECKOUT_INLINE_SNIPPET); addToast('success', 'Snippet copied'); }}
+                    className="p-1.5 text-text-muted hover:text-primary transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                <pre className="p-5 text-xs font-mono text-text-secondary overflow-x-auto leading-relaxed whitespace-pre-wrap">
+                  <code>{checkoutSnippet === 'modal' ? CHECKOUT_EMBED_SNIPPET : CHECKOUT_INLINE_SNIPPET}</code>
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Live Preview</p>
+            <div className="bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs text-text-muted">Invoice Hash (0x...)</label>
+                <input
+                  value={iframeHash}
+                  onChange={(e) => { setIframeHash(e.target.value); setShowPreview(false); }}
+                  placeholder="0xabc123..."
+                  className="w-full bg-surface-2 border border-border-default rounded-xl px-3 py-2 text-sm text-white placeholder-text-dim font-mono focus:outline-none focus:border-primary/50"
+                />
+              </div>
+              <button
+                onClick={() => setShowPreview(true)}
+                disabled={!iframeHash.startsWith('0x')}
+                className="w-full py-2 rounded-xl text-sm font-bold bg-primary text-black hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Launch Checkout
+              </button>
+              {showPreview && iframeHash.startsWith('0x') && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl overflow-hidden border border-border-default"
+                >
+                  <iframe
+                    src={`/checkout/${iframeHash}`}
+                    className="w-full h-72"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    title="CipherPay Checkout Preview"
+                  />
+                </motion.div>
+              )}
+              {!showPreview && (
+                <div className="h-40 rounded-xl border border-dashed border-border-default flex flex-col items-center justify-center gap-2">
+                  <ShoppingCart className="w-6 h-6 text-text-dim" />
+                  <span className="text-xs text-text-dim">Enter an invoice hash to preview</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 text-xs text-text-muted">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span>Sandbox: <code className="text-text-secondary">allow-scripts allow-same-origin allow-popups</code></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span>Your page receives only <code className="text-text-secondary">cipherpay:paid</code> events — no keys, no addresses</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <span>Auto-routes to shielded path when payer has <code className="text-text-secondary">shieldedBalance</code> ≥ bucket</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

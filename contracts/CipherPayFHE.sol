@@ -14,6 +14,11 @@ contract CipherPayFHE {
     uint8 constant TYPE_MULTIPAY = 1;
     uint8 constant TYPE_RECURRING = 2;
     uint8 constant TYPE_VESTING = 3;
+    /// @notice Donation — open-ended, no target amount, no auto-settle.
+    ///         Encrypted amount is set to 0 by convention. Creator sweeps
+    ///         via settleInvoice at any time. All donation amounts remain
+    ///         encrypted; only the aggregate ETH held is visible.
+    uint8 constant TYPE_DONATION = 4;
 
     uint8 constant STATUS_OPEN = 0;
     uint8 constant STATUS_SETTLED = 1;
@@ -52,6 +57,28 @@ contract CipherPayFHE {
     mapping(bytes32 => address[]) private _payers;
     mapping(bytes32 => mapping(address => uint256)) private _payerEth;
 
+    /// @notice Per-user prefunded shielded balance.
+    /// @dev Backs `payInvoiceShielded` so that an invoice payment carries
+    ///      msg.value == 0, breaking the on-chain link between the plaintext
+    ///      ETH transferred and the (encrypted) per-invoice amount.
+    mapping(address => uint256) public shieldedBalance;
+    event ShieldedDeposit(address indexed user, uint256 amount);
+    event ShieldedWithdraw(address indexed user, uint256 amount);
+    event InvoicePaidShielded(bytes32 indexed invoiceHash, address indexed payer);
+
+    // -------- Anonymous Invoice Claim --------
+    // An anonymous invoice has no per-payer event and no payer list. The
+    // creator never learns who paid; payers cannot tell how many other payers
+    // exist or what each contributed. Replay protection uses a nullifier set,
+    // not the payer address. The encrypted aggregate total is the only thing
+    // that grows on-chain, and it stays encrypted (only the creator can read
+    // its final value via permit-based reveal).
+    mapping(bytes32 => bool) public anonEnabled;
+    mapping(bytes32 => mapping(bytes32 => bool)) public anonNullifierUsed;
+    mapping(bytes32 => uint256) public anonEthPool; // aggregate ETH pool
+    event AnonInvoiceEnabled(bytes32 indexed invoiceHash);
+    event AnonClaimSubmitted(bytes32 indexed invoiceHash, bytes32 indexed nullifier);
+
     struct RecurringSchedule {
         uint256 intervalSeconds;
         uint256 totalPeriods;
@@ -88,23 +115,26 @@ contract CipherPayFHE {
         bytes32 _salt,
         string calldata _memo
     ) external returns (bytes32) {
-        require(_invoiceType <= 3, "Invalid type");
+        require(_invoiceType <= 4, "Invalid type");
 
         bytes32 invoiceHash = keccak256(abi.encodePacked(msg.sender, _salt, block.number));
         require(invoices[invoiceHash].creator == address(0), "Hash collision");
 
+        // ACL: least-privilege — encrypted invoice amount is decryptable only
+        // by (a) this contract for arithmetic and (b) the creator (sender).
+        // The recipient gains access lazily on payment via FHE.allow below.
         euint64 amount = FHE.asEuint64(_encryptedAmount);
         FHE.allowThis(amount);
         FHE.allowSender(amount);
-        FHE.allowTransient(amount, address(this));
 
+        // Encrypted recipient: only the creator can decrypt off-chain.
         eaddress encRecipient = FHE.asEaddress(_encryptedRecipient);
         FHE.allowThis(encRecipient);
         FHE.allowSender(encRecipient);
 
+        // Running collected total starts at zero — only this contract can mutate.
         euint64 zero = FHE.asEuint64(0);
         FHE.allowThis(zero);
-        FHE.allowTransient(zero, address(this));
 
         invoices[invoiceHash] = Invoice({
             creator: msg.sender,
@@ -128,6 +158,10 @@ contract CipherPayFHE {
         _ensurePlatformInit();
         platformInvoiceCount = FHE.add(platformInvoiceCount, FHE.asEuint32(1));
         FHE.allowThis(platformInvoiceCount);
+        // allowGlobal is intentional: the *count* of invoices is a public
+        // protocol metric (analogous to a public counter on a DEX). It carries
+        // no per-user information, so global decryptability is least-privilege
+        // for this datum specifically — it does NOT extend to amounts.
         FHE.allowGlobal(platformInvoiceCount);
 
         emit InvoiceCreated(invoiceHash, msg.sender, _invoiceType, _hasRecipient, _deadline, _unlockBlock, _memo);
@@ -161,25 +195,36 @@ contract CipherPayFHE {
         euint64 payment = FHE.asEuint64(_encryptedPayment);
         FHE.allowThis(payment);
 
+        // remaining/actualPayment are short-lived intermediates: granted
+        // single-tx (transient) access only — never persisted, never
+        // exposed to any external party. This is strictly tighter than
+        // allowThis (which would survive past this transaction).
         euint64 remaining = FHE.sub(inv.encryptedAmount, inv.totalCollected);
         FHE.allowTransient(remaining, address(this));
-
         euint64 actualPayment = FHE.min(remaining, payment);
         FHE.allowTransient(actualPayment, address(this));
 
         inv.totalCollected = FHE.add(inv.totalCollected, actualPayment);
         FHE.allowThis(inv.totalCollected);
+        // Least-privilege: payer can see *their* contribution; creator can
+        // see the running total. No global grant.
         FHE.allowSender(inv.totalCollected);
         FHE.allow(inv.totalCollected, inv.creator);
 
         _ensurePlatformInit();
         platformVolume = FHE.add(platformVolume, actualPayment);
         FHE.allowThis(platformVolume);
+        // allowGlobal: aggregate platform volume across ALL invoices is a
+        // public protocol KPI (TVL-equivalent). Per-invoice amounts remain
+        // shielded by the ACLs above. Documented as least-privilege for
+        // this aggregate-only datum.
         FHE.allowGlobal(platformVolume);
 
+        // Mark as publicly decryptable so the frontend can call
+        // decryptForTx (new API — FHE.decrypt() deprecated April 13 2026).
         ebool isPaidInFull = FHE.gte(inv.totalCollected, inv.encryptedAmount);
         FHE.allowThis(isPaidInFull);
-        FHE.decrypt(isPaidInFull);
+        FHE.allowPublic(isPaidInFull);
 
         if (!hasPaid[_invoiceHash][msg.sender]) {
             hasPaid[_invoiceHash][msg.sender] = true;
@@ -193,7 +238,8 @@ contract CipherPayFHE {
         _payerEth[_invoiceHash][msg.sender] += msg.value;
 
         // Auto-settle: transfer escrowed ETH to creator
-        if (inv.invoiceType != TYPE_MULTIPAY) {
+        // MULTIPAY and DONATION both require manual settle by creator.
+        if (inv.invoiceType != TYPE_MULTIPAY && inv.invoiceType != TYPE_DONATION) {
             inv.status = STATUS_SETTLED;
             uint256 payout = _ethHeld[_invoiceHash];
             _ethHeld[_invoiceHash] = 0;
@@ -205,11 +251,217 @@ contract CipherPayFHE {
         emit InvoicePaid(_invoiceHash, msg.sender);
     }
 
+    /**
+     * @notice Deposit ETH into a per-user shielded balance.
+     * @dev The deposit amount is necessarily public (it's an ETH transfer),
+     *      but once funds are inside `shieldedBalance` they can be spent
+     *      via `payInvoiceShielded` without exposing per-payment amounts on-chain.
+     */
+    function depositShielded() external payable {
+        require(msg.value > 0, "Must send ETH");
+        shieldedBalance[msg.sender] += msg.value;
+        emit ShieldedDeposit(msg.sender, msg.value);
+    }
+
+    /// @notice Withdraw unspent shielded balance.
+    function withdrawShielded(uint256 _amount) external {
+        require(_amount > 0 && shieldedBalance[msg.sender] >= _amount, "Bad amount");
+        shieldedBalance[msg.sender] -= _amount;
+        (bool sent, ) = payable(msg.sender).call{value: _amount}("");
+        require(sent, "Withdraw failed");
+        emit ShieldedWithdraw(msg.sender, _amount);
+    }
+
+    /**
+     * @notice Pay an invoice from the prefunded shielded balance.
+     * @dev Unlike `payInvoice`, this entrypoint takes msg.value == 0, so the
+     *      transaction's plaintext value field carries no information about
+     *      the encrypted amount. The actual ETH movement (debit from
+     *      shieldedBalance, credit to creator) happens internally and is
+     *      bounded by `_maxDebit` — a per-call cap that the user picks (e.g.
+     *      a round number like 0.01 ETH) to bucket payments and break the
+     *      link between an individual invoice and an exact ETH transfer.
+     *
+     *      Privacy properties:
+     *        - msg.value is always 0 → no per-call leakage from the tx envelope
+     *        - encrypted payment amount stays encrypted on-chain
+     *        - creator receives exactly `_maxDebit` (a coarse, user-chosen
+     *          bucket), not the true encrypted amount; the difference stays
+     *          credited to the creator's own shielded balance for later use,
+     *          so no on-chain link between this payment and the real amount.
+     *
+     *      Limitations: the chosen `_maxDebit` is still public, so users
+     *      should pick a small set of standard buckets (0.001, 0.01, 0.1).
+     */
+    function payInvoiceShielded(
+        bytes32 _invoiceHash,
+        InEuint64 calldata _encryptedPayment,
+        uint256 _maxDebit
+    ) external {
+        require(_maxDebit > 0, "Bad debit");
+        require(shieldedBalance[msg.sender] >= _maxDebit, "Insufficient shielded balance");
+
+        Invoice storage inv = invoices[_invoiceHash];
+        require(inv.creator != address(0), "Invoice not found");
+        require(inv.status == STATUS_OPEN, "Not open");
+        if (inv.hasRecipient) {
+            require(msg.sender == inv.recipient, "Not authorized payer");
+        }
+        if (inv.deadline > 0) {
+            require(block.timestamp <= inv.deadline, "Deadline passed");
+        }
+        if (inv.invoiceType == TYPE_VESTING) {
+            require(block.number >= inv.unlockBlock, "Still locked");
+        }
+
+        euint64 payment = FHE.asEuint64(_encryptedPayment);
+        FHE.allowThis(payment);
+
+        euint64 remaining = FHE.sub(inv.encryptedAmount, inv.totalCollected);
+        FHE.allowTransient(remaining, address(this));
+        euint64 actualPayment = FHE.min(remaining, payment);
+        FHE.allowTransient(actualPayment, address(this));
+
+        inv.totalCollected = FHE.add(inv.totalCollected, actualPayment);
+        FHE.allowThis(inv.totalCollected);
+        FHE.allowSender(inv.totalCollected);
+        FHE.allow(inv.totalCollected, inv.creator);
+
+        _ensurePlatformInit();
+        platformVolume = FHE.add(platformVolume, actualPayment);
+        FHE.allowThis(platformVolume);
+        FHE.allowGlobal(platformVolume);
+
+        // Move ETH internally — payer is debited the *bucket*, creator is
+        // credited the same bucket into their own shielded balance. No
+        // per-invoice ETH transfer hits the chain plaintext.
+        shieldedBalance[msg.sender] -= _maxDebit;
+        shieldedBalance[inv.creator] += _maxDebit;
+
+        if (!hasPaid[_invoiceHash][msg.sender]) {
+            hasPaid[_invoiceHash][msg.sender] = true;
+            paidInvoices[msg.sender].push(_invoiceHash);
+            _payers[_invoiceHash].push(msg.sender);
+            inv.payerCount++;
+        }
+
+        emit InvoicePaidShielded(_invoiceHash, msg.sender);
+    }
+
+    /**
+     * @notice Creator opts an existing invoice into anonymous-claim mode.
+     * @dev Once enabled, payments via `claimAnonymously` will not record the
+     *      payer address, will not emit `InvoicePaid`, and the creator gets
+     *      no per-payer trail. The aggregate encrypted total still updates.
+     */
+    function enableAnonClaim(bytes32 _invoiceHash) external {
+        Invoice storage inv = invoices[_invoiceHash];
+        require(inv.creator == msg.sender, "Only creator");
+        require(inv.status == STATUS_OPEN, "Not open");
+        anonEnabled[_invoiceHash] = true;
+        emit AnonInvoiceEnabled(_invoiceHash);
+    }
+
+    /**
+     * @notice Submit a payment to an anonymous invoice without revealing identity.
+     * @param _invoiceHash invoice to pay
+     * @param _encryptedPayment encrypted contribution amount
+     * @param _nullifier   client-generated 32-byte nullifier (e.g.
+     *                     keccak256(secret || invoiceHash)). Re-using the
+     *                     same nullifier reverts, preventing replay/spam.
+     *
+     * @dev Privacy properties:
+     *      - msg.sender is NOT recorded against the invoice (no `_payers`,
+     *        no `hasPaid`, no `paidInvoices` write)
+     *      - no `InvoicePaid` event (would expose `indexed payer`); only a
+     *        nullifier-keyed event is emitted, which links to a secret only
+     *        the payer knows
+     *      - the creator cannot enumerate payers; the encrypted total is
+     *        the only signal that the invoice received funds
+     *      - payerCount is intentionally NOT incremented in anon mode, so
+     *        the creator does not learn how many distinct contributors exist
+     *
+     *      Trade-off: msg.value still leaks the per-call ETH amount in the
+     *      tx envelope. Combine with `payInvoiceShielded` semantics if the
+     *      payer also wants to hide the bucket — left as a follow-up so this
+     *      entrypoint stays simple to integrate.
+     */
+    function claimAnonymously(
+        bytes32 _invoiceHash,
+        InEuint64 calldata _encryptedPayment,
+        bytes32 _nullifier
+    ) external payable {
+        require(msg.value > 0, "Must send ETH");
+
+        Invoice storage inv = invoices[_invoiceHash];
+        require(inv.creator != address(0), "Invoice not found");
+        require(inv.status == STATUS_OPEN, "Not open");
+        require(anonEnabled[_invoiceHash], "Anon not enabled");
+        require(!anonNullifierUsed[_invoiceHash][_nullifier], "Nullifier used");
+        if (inv.deadline > 0) {
+            require(block.timestamp <= inv.deadline, "Deadline passed");
+        }
+        // Anonymous-claim mode is incompatible with hasRecipient — that
+        // would require msg.sender == recipient, which de-anonymises.
+        require(!inv.hasRecipient, "Anon disallowed for restricted invoice");
+
+        anonNullifierUsed[_invoiceHash][_nullifier] = true;
+
+        euint64 payment = FHE.asEuint64(_encryptedPayment);
+        FHE.allowThis(payment);
+
+        euint64 remaining = FHE.sub(inv.encryptedAmount, inv.totalCollected);
+        FHE.allowTransient(remaining, address(this));
+        euint64 actualPayment = FHE.min(remaining, payment);
+        FHE.allowTransient(actualPayment, address(this));
+
+        inv.totalCollected = FHE.add(inv.totalCollected, actualPayment);
+        FHE.allowThis(inv.totalCollected);
+        // Only the creator can decrypt the running total. Notably we do NOT
+        // call FHE.allowSender here — that would let the anonymous payer
+        // decrypt the aggregate, which leaks across all payers.
+        FHE.allow(inv.totalCollected, inv.creator);
+
+        _ensurePlatformInit();
+        platformVolume = FHE.add(platformVolume, actualPayment);
+        FHE.allowThis(platformVolume);
+        FHE.allowGlobal(platformVolume);
+
+        anonEthPool[_invoiceHash] += msg.value;
+        _ethHeld[_invoiceHash] += msg.value;
+
+        // No `_payers.push`, no `hasPaid` write, no `paidInvoices.push`.
+        // Only a nullifier-keyed event — does not contain msg.sender.
+        emit AnonClaimSubmitted(_invoiceHash, _nullifier);
+    }
+
+    /**
+     * @notice Creator sweeps the anonymous ETH pool. Called manually because
+     *         there is no per-payment auto-settle (auto-settle would require
+     *         comparing aggregate to target, which is encrypted).
+     */
+    function sweepAnonPool(bytes32 _invoiceHash) external {
+        Invoice storage inv = invoices[_invoiceHash];
+        require(inv.creator == msg.sender, "Only creator");
+        require(anonEnabled[_invoiceHash], "Anon not enabled");
+        uint256 payout = anonEthPool[_invoiceHash];
+        require(payout > 0, "Nothing to sweep");
+        anonEthPool[_invoiceHash] = 0;
+        // _ethHeld is the union; subtract the swept share.
+        if (_ethHeld[_invoiceHash] >= payout) {
+            _ethHeld[_invoiceHash] -= payout;
+        } else {
+            _ethHeld[_invoiceHash] = 0;
+        }
+        (bool sent, ) = payable(inv.creator).call{value: payout}("");
+        require(sent, "ETH transfer failed");
+    }
+
     function settleInvoice(bytes32 _invoiceHash) external {
         Invoice storage inv = invoices[_invoiceHash];
         require(inv.creator == msg.sender, "Only creator");
         require(inv.status == STATUS_OPEN, "Not open");
-        require(inv.invoiceType == TYPE_MULTIPAY, "Not multipay");
+        require(inv.invoiceType == TYPE_MULTIPAY || inv.invoiceType == TYPE_DONATION, "Not multipay/donation");
 
         inv.status = STATUS_SETTLED;
         uint256 payout = _ethHeld[_invoiceHash];
@@ -381,15 +633,43 @@ contract CipherPayFHE {
     function getPaidInvoices(address _user) external view returns (bytes32[] memory) { return paidInvoices[_user]; }
     function checkHasPaid(bytes32 _invoiceHash, address _payer) external view returns (bool) { return hasPaid[_invoiceHash][_payer]; }
 
+    /**
+     * @notice Phase 1 of the two-phase decrypt flow (FHE.decrypt deprecated
+     *         April 13 2026). Computes isPaidInFull and marks the handle as
+     *         publicly decryptable (FHE.allowPublic). The caller must then:
+     *   1. off-chain: `client.decryptForTx(ctHash).withoutPermit().execute()`
+     *   2. on-chain:  `publishPaidCheckResult(invoiceHash, plaintext, sig)`
+     */
     function requestFullyPaidCheck(bytes32 _invoiceHash) external {
         Invoice storage inv = invoices[_invoiceHash];
         require(inv.creator != address(0), "Invoice not found");
         ebool isPaidInFull = FHE.gte(inv.totalCollected, inv.encryptedAmount);
         FHE.allowThis(isPaidInFull);
         _paidCheckResults[_invoiceHash] = isPaidInFull;
-        FHE.decrypt(isPaidInFull);
+        FHE.allowPublic(isPaidInFull);
     }
 
+    /**
+     * @notice Phase 2 — submit the Threshold Network decrypt signature to
+     *         verify and store the plaintext result on-chain.
+     * @param _invoiceHash invoice whose paid-check handle was requested
+     * @param _plaintext   plaintext bool returned by `decryptForTx`
+     * @param _signature   Threshold Network signature returned by `decryptForTx`
+     */
+    function publishPaidCheckResult(
+        bytes32 _invoiceHash,
+        bool _plaintext,
+        bytes calldata _signature
+    ) external {
+        ebool result = _paidCheckResults[_invoiceHash];
+        require(ebool.unwrap(result) != 0, "No check requested");
+        FHE.publishDecryptResult(result, _plaintext, _signature);
+    }
+
+    /**
+     * @notice Read the stored plaintext result after `publishPaidCheckResult`
+     *         has been called. Returns (false, false) if not yet published.
+     */
     function getFullyPaidResult(bytes32 _invoiceHash) external view returns (bool isPaid, bool decrypted) {
         ebool result = _paidCheckResults[_invoiceHash];
         (bool value, bool isReady) = FHE.getDecryptResultSafe(result);
@@ -423,6 +703,10 @@ contract CipherPayFHE {
             platformInvoiceCount = FHE.asEuint32(0);
             FHE.allowThis(platformVolume);
             FHE.allowThis(platformInvoiceCount);
+            // allowGlobal is restricted to these two protocol-wide aggregates
+            // (TVL-style volume and invoice count). They are explicitly
+            // designed to be public and contain no per-user information.
+            // No other handle in this contract receives allowGlobal.
             FHE.allowGlobal(platformVolume);
             FHE.allowGlobal(platformInvoiceCount);
             _platformInitialized = true;

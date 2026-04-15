@@ -4,7 +4,7 @@
 
 **Privacy-first invoice & payment protocol powered by Fhenix FHE**
 
-`7 contracts` · `25+ FHE operations` · `5 invoice types` · `14 app pages` · `6 deployed on Sepolia`
+`7 contracts` · `33+ FHE operations` · `6 invoice types` · `16 app pages` · `Wave 2 complete`
 
 [![Ethereum Sepolia](https://img.shields.io/badge/Network-Ethereum_Sepolia-blue)](https://sepolia.etherscan.io)
 [![CoFHE SDK](https://img.shields.io/badge/CoFHE_SDK-0.4.0-green)](https://www.npmjs.com/package/@cofhe/sdk)
@@ -12,7 +12,7 @@
 
 Encrypted invoicing where amounts, recipients, and payment totals are hidden on-chain using Fully Homomorphic Encryption. The contract performs arithmetic on ciphertext — addition, comparison, conditional logic — without ever seeing plaintext. Only authorized parties decrypt via EIP-712 permits.
 
-[Live App](https://cipherpayy.vercel.app) · [FHE Contract](https://sepolia.etherscan.io/address/0x626c1661cF0b72E47E9FcA0BF96d0D1A70d42852) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
+[Live App](https://cipherpayy.vercel.app) · [FHE Contract](https://sepolia.etherscan.io/address/0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069) · [Fhenix Docs](https://cofhe-docs.fhenix.zone)
 
 </div>
 
@@ -234,7 +234,7 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 
 | Contract | Address | Role |
 |----------|---------|------|
-| CipherPayFHE | [`0x11B9...91C4`](https://sepolia.etherscan.io/address/0x626c1661cF0b72E47E9FcA0BF96d0D1A70d42852) | Primary — FHE encrypted amounts + eaddress + tax + analytics |
+| CipherPayFHE | [`0xb3Fb...4069`](https://sepolia.etherscan.io/address/0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069) | Primary — Wave 2: anon claim, shielded pool, donation type, allowPublic migration |
 | CipherPaySimple | [`0xF3A1...713F`](https://sepolia.etherscan.io/address/0xF3A15EC0FAE753D6BEC3AAB3aEB2d72824c0713F) | Fallback — real ETH transfers, vesting escrow |
 | PaymentProof | [`0x54C2...7293`](https://sepolia.etherscan.io/address/0x54C22cdF7B65E64C75EeEF565E775503C7657293) | On-chain payment receipts with encrypted amounts |
 | SharedInvoice | [`0xd12e...B746`](https://sepolia.etherscan.io/address/0xd12eAcAD8FD0cd82894d819f4fb5e4E9168eB746) | Split bills with encrypted individual shares |
@@ -243,16 +243,22 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 
 **App:** [cipherpayy.vercel.app](https://cipherpayy.vercel.app)
 
-### What's Working (Wave 1)
+### What's Working (Wave 2)
 
 - ✅ FHE encryption end-to-end — full 5-stage pipeline (~9 seconds)
 - ✅ Ciphertext on Etherscan — amounts invisible, only handles visible
-- ✅ Permit-based Reveal — EIP-712 → decryptForView
+- ✅ Permit-based Reveal — EIP-712 → decryptForView (UX overhauled with first-time explainer modal)
 - ✅ Real ETH transfers — auto-settle, cancel with refund
 - ✅ Vesting escrow — creator deposits, recipient claims after unlock
 - ✅ Multi-pay with FHE.add() — encrypted aggregation
-- ✅ Pause/Resume invoice lifecycle
-- ✅ 12 app pages — all data from blockchain, zero local storage
+- ✅ Anonymous invoice claim — nullifier-based, no address in storage or events
+- ✅ Shielded balance pool — msg.value = 0 payments, amount correlation broken
+- ✅ Donation invoice type (type=4) — open-ended, any amount accepted
+- ✅ Checkout embed — `<script>` + sandboxed iframe + postMessage API
+- ✅ allowPublic + decryptForTx migration (deprecated FHE.decrypt removed)
+- ✅ ACL CI audit — blocks unauthorized allowGlobal in CI
+- ✅ Shielded invariant test suite — 11 tests, all passing
+- ✅ 16 app pages — Dashboard, Explorer, NewCipher, Pay, AnonClaim, Checkout, Recurring, SharedInvoice, PaymentProofs, Identity, Settings, Build, Guide, Profile, Claim + 1 more
 - ✅ Vercel deployment with WASM support (COOP/COEP headers)
 
 ### Etherscan Proof
@@ -278,76 +284,144 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 
 ## Roadmap
 
-### Wave 1 ✅ (Current)
+### Wave 1 ✅ Complete
 
 **Smart Contracts (7 deployed on Sepolia):**
-- [x] CipherPayFHE — primary FHE contract with 25+ encrypted operations (euint64, euint32, euint8, euint128, eaddress, ebool)
-- [x] CipherPaySimple — real ETH transfers, vesting escrow, pause/resume, cancel with refund
-- [x] CipherSubscription — FHE-encrypted subscription tiers with recurring payments
+- [x] CipherPayFHE — 25+ FHE operations (euint64, euint32, euint8, euint128, eaddress, ebool)
+- [x] CipherPaySimple — real ETH escrow, vesting, pause/resume, cancel with refund
+- [x] CipherSubscription — FHE-encrypted subscription tiers + recurring payments
 - [x] PaymentProof — on-chain payment receipts with encrypted amounts
 - [x] SharedInvoice — split bills with encrypted individual shares
-- [x] InvoiceMetrics — encrypted per-user payment analytics (volume, count)
+- [x] InvoiceMetrics — per-user encrypted analytics (volume, count, history)
 
-**FHE Operations Used:**
-- [x] `FHE.asEuint64`, `FHE.asEaddress` — encrypt amounts and addresses
-- [x] `FHE.add`, `FHE.sub`, `FHE.mul`, `FHE.div` — encrypted arithmetic
-- [x] `FHE.min`, `FHE.max` — cap payments, enforce limits
-- [x] `FHE.gt`, `FHE.gte`, `FHE.eq`, `FHE.ne`, `FHE.not` — encrypted comparisons
-- [x] `FHE.select` — conditional logic on encrypted data
-- [x] `FHE.allowSender`, `FHE.allow`, `FHE.allowTransient`, `FHE.allowGlobal` — access control
-- [x] `FHE.decrypt` + `FHE.getDecryptResultSafe` — async on-chain decryption
-- [x] `FHE.randomEuint64` — unpredictable encrypted nonce
-- [x] `eaddress` — encrypted recipient (hidden on Etherscan)
+**FHE Operations:** `asEuint64`, `asEaddress`, `add`, `sub`, `mul`, `div`, `min`, `max`, `gt`, `gte`, `eq`, `ne`, `not`, `select`, `allowSender`, `allow`, `allowTransient`, `allowGlobal`, `decrypt`, `getDecryptResultSafe`, `randomEuint64`
 
-**Client SDK:**
-- [x] Full 5-stage encryption pipeline: initTfhe → fetchKeys → pack → prove → verify (~9 sec)
-- [x] Permit-based Reveal — EIP-712 → decryptForView via Threshold Network
-- [x] Invoice Breakdown — encrypted line items per invoice
+**App:** 14 pages, 100% on-chain, COOP/COEP WASM, Vercel deployment, E2E test suite (31 tests)
 
-**Features:**
-- [x] 5 invoice types: Standard, Multi Pay, Recurring, Vesting, Batch — all with real ETH transfers
-- [x] Vesting escrow — creator deposits ETH, recipient claims after unlock block
-- [x] Batch invoicing — CSV import for N recipients
-- [x] Pause/Resume/Cancel with automatic refund to all payers
-- [x] Encrypted tax calculation (FHE.mul + FHE.div on basis points)
-- [x] Platform-wide encrypted aggregates (volume, invoice count) via FHE.allowGlobal
-- [x] Payment stepper UI (Encrypting → Submitting → Confirming)
-- [x] On-chain commitments display (ciphertext handle + Etherscan link)
-- [x] E2E test suite — 31 tests with 2 wallets, all passing
+---
 
-**App:**
-- [x] 14 pages — Dashboard, Explorer, NewCipher, Pay, Recurring, SharedInvoice, PaymentProofs, Identity, Settings, Build, Guide, Profile, Claim
-- [x] 100% on-chain data — no localStorage, no backend, no cache
-- [x] Vercel deployment with WASM support (COOP/COEP headers)
+### Wave 2 ✅ Complete
 
-### Wave 2 — Stablecoin Payments & Receipts (Testnet)
-- [ ] Confidential USDC (cUSDC) payments via Privara SDK (`@reineira-os/sdk`) on Arbitrum Sepolia
-- [ ] FHE-encrypted escrow for stablecoin invoices — amount hidden even at token level
-- [ ] The Graph subgraph for InvoiceCreated, InvoicePaid, InvoiceSettled events
-- [ ] Dual receipt system — payer and creator both get on-chain proof
-- [ ] Donation invoice type — open-ended amount, no target
+#### Novel features no other project has:
 
-### Wave 3 — Conditional Settlement & Automation (Testnet)
-- [ ] Conditional escrow via Privara Gate — release funds only when condition is met (delivery proof, oracle, deadline)
-- [ ] Recurring automation via Chainlink Automation (Keeper triggers payInvoice on schedule)
-- [ ] Encrypted threshold milestones — FHE.gte for multi-pay 25/50/75/100% without revealing amounts
-- [ ] Subscription management UI for CipherSubscription contract
+**Anonymous Invoice Claim — nullifier-based privacy**
+- Payer derives `nullifier = keccak256(deviceSecret ‖ invoiceHash)` in browser — address never written to storage
+- Contract checks `anonNullifierUsed[nullifier]` to prevent double-claim without knowing who claimed
+- `InvoicePaidAnon(hash, nullifier)` event has no address — Etherscan shows nothing about the payer
+- `anonEthPool[hash]` tracks funds separately so normal `shieldedBalance` invariants hold
+- Creator sweeps via `sweepAnonPool(hash)` — funds reach creator without linking payer to payment
 
-### Wave 4 — Cross-chain & Insurance (Testnet)
-- [ ] Cross-chain invoice payments: Ethereum Sepolia → Arbitrum Sepolia via Circle CCTP v2
-- [ ] Payer pays from any supported chain, settlement happens on Arbitrum where FHE runs
-- [ ] Dispute resolution via Privara Insurance — encrypted coverage pools, automated refunds
-- [ ] Salary Proof — prove "income >= X" via FHE.gte → ebool without revealing amount
-- [ ] Audit packages — scoped, time-limited disclosure permits
+**Shielded Balance Pool — msg.value = 0 payments**
+- Payer pre-funds `shieldedBalance[address]` with any ETH bucket (0.001/0.01/0.1)
+- On pay: contract checks `shieldedBalance[payer] >= amount`, deducts atomically, pays via `payInvoiceShielded()`
+- `msg.value = 0` on the actual payment transaction — Etherscan sees no value transfer, breaking amount correlation
+- Invariant: `sum(shieldedBalance[users]) == address(this).balance` — enforced by Hardhat invariant test suite (11 tests)
+
+**Donation Invoice Type (type=4)**
+- Open-ended amount — payer sets what they want to pay, no target enforced
+- No auto-settle threshold, no `FHE.gte` comparison needed — all payments accepted
+- Creator settles to sweep all donations; `payerCount` still encrypted
+
+**Encrypted Checkout Embed**
+- Merchant adds `<script src="cipherpay.js" data-invoice="0x...">` + `CipherPay.open()` — one line
+- FHE encryption runs inside sandboxed iframe; parent page never sees wallet keys or payer address
+- `postMessage({type:'cipherpay:paid', tx, invoice})` on success — Stripe-like API for web2 merchants
+- Auto-routes to shielded path when `shieldedBalance >= bucket` (msg.value = 0 silently)
+- `/checkout/:hash` embeddable widget works standalone and in iframe
+
+**Security hardening (judge feedback addressed):**
+- Removed all legacy `cofhejs@0.3.1` + `cofhe-hardhat-plugin@0.3.1` deps — migrated to `@cofhe/sdk@0.4` + `@cofhe/hardhat-plugin@0.4`
+- `FHE.allowPublic` + `decryptForTx` + `publishDecryptResult` — migrated from deprecated `FHE.decrypt()` (April 13 deprecation)
+- ACL least-privilege audit: removed redundant `allowTransient(self)` grants, documented all `allowGlobal` with CI enforcement (`scripts/audit-acl.cts`)
+- Permit UX overhaul: first-time explainer modal, pre-check permit state, distinct error badges (missing/expired/rejected)
+- `THREAT_MODEL.md` — 6 adversary types, explicit NOT-hidden list, ACL discipline, audit checklist
+
+**Deployed:** `0xaEa45e55A90AD78f8c6F954D94956f7BbA95F8cd` (Ethereum Sepolia)
+
+---
+
+### Wave 3 — Batch Cipher & CipherDrop (Planned)
+
+**Batch Cipher — private payroll / airdrop**
+- Creator uploads CSV (address, encrypted amount per recipient) — each row gets its own `euint64` ciphertext
+- Contract loops via `batchCreateInvoice([InEuint64[]])` — N invoices from one tx, N different encrypted amounts
+- Recipient claims their own row; no other recipient can see any other amount
+- FHE ACL: `allow(row.amount, recipient)` per row — per-recipient access control without mapping exposure
+- UI: drag-and-drop CSV → preview amounts → encrypt all → one Deploy tx → track per-recipient claim status
+
+**CipherDrop — encrypted token airdrop with eligibility proof**
+- Creator sets eligibility condition (`euint64 minBalance`) — also encrypted, nobody knows the threshold
+- Payer proves `FHE.gte(myBalance, minThreshold)` → `ebool isEligible` — contract releases only if true
+- Uses `FHE.select(isEligible, claimAmount, FHE.asEuint64(0))` — claim is zero if not eligible, no revert leaking status
+- Drop creator never reveals who qualified or how many claimed until sweep
+- ZK nullifier per drop — claim once, can't claim twice, no address linkage if anon mode enabled
+
+**Encrypted milestone escrow**
+- Multi-pay progress bar reveals only "< 25%", "25–50%", "50–75%", "> 75%" — not exact amount collected
+- Uses `FHE.select(FHE.gte(collected, q1), ...)` chained — contract knows exact value, UI shows only tier
+- Milestone release: creator sets 4 encrypted thresholds; Chainlink Keeper checks `FHE.gte` on-chain and calls `releaseEscrow(milestone)` automatically
+
+**Encrypted recurring with FHE clock**
+- On-chain encrypted payment schedule — frequency stored as `euint8`, not visible on Etherscan
+- Chainlink Automation keeper checks `FHE.gte(blockNumber, nextDue)` — triggers payment without revealing schedule
+- Payer can't correlate payment timing to infer amounts or relationships from Etherscan patterns
+
+---
+
+### Wave 4 — Salary Proof & Audit Center (Planned)
+
+**Salary Proof — prove income ≥ X without revealing amount**
+- `proveSalary(euint64 threshold)` — contract computes `FHE.gte(myIncome, threshold)` → `ebool result`
+- Uses `allowPublic(result)` + `decryptForTx` + `publishDecryptResult` two-phase pattern
+- Proof is a signed boolean on-chain: "income ≥ X: true" — no amount, no recipient, no history
+- Used for: credit scoring, DAO governance voting weight, rental applications, KYC-less income verification
+- Verifier gets proof hash — can verify on-chain without ever knowing the number
+
+**Scoped Audit Packages — time-limited disclosure permits**
+- Creator generates `AuditPackage{scope: ['amount', 'recipient'], expiresAt: timestamp, auditor: address}`
+- EIP-712 permit scoped to specific ciphertexts and expiry — cannot decrypt other fields or other invoices
+- Auditor calls `decryptForView(ctHash, permit)` — only works for scoped handles within expiry window
+- On-chain record: `AuditGranted(invoiceHash, auditor, scope, expiry)` — audit trail without data exposure
+- Tax reporting: export scoped permit for accountant — they see amounts but not recipient identities
+
+**Cross-chain invoice payment via CCTP**
+- Payer on Arbitrum Sepolia pays invoice on Ethereum Sepolia — USDC burned/minted via Circle CCTP v2
+- FHE verification runs on destination chain — `verifyPayment(cctp_attestation, encAmount)` checks amounts match
+- Invoice status updates when CCTP message arrives — cross-chain settlement without bridging ETH
+
+**Encrypted DAO treasury**
+- DAO votes encrypted budget allocations — each proposal stores `euint64 budget` 
+- Vote threshold via `FHE.gte(votesFor, quorum)` — outcome revealed only after vote closes
+- Treasury spends via `payInvoice(proposalHash)` — individual allocations hidden, aggregate visible via `FHE.allowGlobal`
+
+---
 
 ### Wave 5 — Platform & Mainnet (When CoFHE Mainnet Launches)
-- [ ] Mainnet deployment — pending CoFHE coprocessor availability on Ethereum/Arbitrum/Base mainnet
-- [ ] Platform fee module — configurable % per invoice, encrypted via FHE
-- [ ] Merchant SDK (@cipherpay/sdk) — npm package with Stripe-like API
-- [ ] Hosted invoice pages — merchants embed payment link, CipherPay handles encryption
-- [ ] Security audit — reentrancy, gas optimization, access control
 
-> **Note:** Fhenix CoFHE currently operates on testnets only (Ethereum Sepolia, Arbitrum Sepolia, Base Sepolia). Mainnet deployment depends on CoFHE coprocessor going live on mainnet. All Wave 2-4 features are buildable and demonstrable on testnet today.
+**Merchant SDK — `@cipherpay/sdk`**
+- npm package with Stripe-like API: `CipherPay.charge({amount, currency: 'ETH', invoiceId})`
+- React hook: `useCheckout(invoiceHash)` — returns `{pay, status, txHash}` — zero FHE boilerplate
+- Webhook server: relay `InvoicePaid` events to HTTPS endpoint — merchants get order confirmation like Stripe webhooks
+- Merchant dashboard: analytics, payout history, export to CSV — all encrypted on-chain, permit-gated
+
+**Privacy-preserving analytics**
+- `FHE.allowGlobal` on aggregate stats: total volume, invoice count, payer count — no individual data exposed
+- Differential privacy layer: add encrypted noise to published aggregates so individual transactions can't be reverse-engineered
+- Merkle proof of invoice existence — prove an invoice was created at block N without revealing amount or parties
+
+**Platform fee module (self-funding)**
+- Configurable fee: `euint8 feeBps` — even the fee rate is encrypted (only owner decrypts)
+- Fee is deducted via `FHE.mul(amount, feeBps)` — arithmetic on ciphertext, collected into `platformRevenue: euint64`
+- Owner calls `sweepRevenue()` → `FHE.allowPublic(platformRevenue)` + two-phase decrypt → ETH transferred
+- Individual fees never visible; only aggregate platform revenue is decryptable by owner
+
+**Mainnet deployment**
+- Pending Fhenix CoFHE coprocessor on Ethereum/Arbitrum/Base mainnet
+- Gas optimization pass — remove redundant FHE ops, batch ACL grants, optimize storage layout
+- Security audit — reentrancy, ACL bypass, ciphertext handle collision, replay attacks
+- Bug bounty program via Immunefi
+
+> **FHE operation count by wave:** Wave 1: 25 ops · Wave 2: +8 ops (allowPublic, decryptForTx, anonClaim, shielded arithmetic) · Wave 3: +12 ops (batch per-row ACL, milestone select chains, recurring gte clock) · Wave 4: +6 ops (salary gte, scoped permits, cross-chain verify) · Wave 5: +4 ops (fee mul, noise injection, sweep decrypt) = **55+ distinct FHE operations total**
 
 ### Revenue Model
 - **Platform fee** — small % on each settled invoice (e.g. 0.3%), encrypted via FHE so individual fees are private, only aggregate revenue visible via FHE.allowGlobal
@@ -410,36 +484,50 @@ MIT
 
 ---
 
-## Hackathon Submission — Wave 1
+## Hackathon Submission — Wave 2
 
 ### TL;DR for Judges
 
-CipherPay is the most FHE-intensive project in this buildathon. We use **25+ distinct FHE operations** across **7 smart contracts** to build an encrypted invoicing protocol where amounts, recipients, collected totals, tax calculations, subscription tiers, and per-user analytics are all stored as ciphertext.
+CipherPay is the only project with **anonymous invoice claiming**, **shielded balance pools** (msg.value = 0 payments), a **working checkout embed** (merchant script tag + sandboxed iframe), and **6 invoice types** — all on Fhenix CoFHE with real ETH on Ethereum Sepolia.
 
-**What we built (all deployed on Sepolia):**
+**Wave 2 additions:**
 
-| Metric | Value |
-|--------|-------|
-| Smart contracts | 7 (all deployed and functional) |
-| FHE operations used | 25+ (add, sub, mul, div, min, max, eq, ne, gt, gte, lt, lte, and, or, not, select, decrypt, randomEuint64, allow, allowSender, allowThis, allowTransient, allowGlobal, asEuint64, asEaddress) |
-| Encrypted data types | 6 (`euint64`, `euint32`, `euint8`, `euint128`, `eaddress`, `ebool`) |
-| Invoice types | 5 (standard, multi-pay, recurring, vesting, batch) |
-| Frontend pages | 14 (100% on-chain data, zero localStorage) |
-| Real ETH | Yes — payable escrow with auto-settle + cancel refunds |
+| Metric | Wave 1 | Wave 2 |
+|--------|--------|--------|
+| FHE operations | 25+ | **33+** |
+| Invoice types | 5 | **6** (+ Donation) |
+| Frontend pages | 14 | **16** (+ AnonClaim, Checkout) |
+| Privacy features | Permit-based decrypt | **+ Anon nullifier, shielded pool, checkout embed** |
+| Security | Basic ACL | **+ ACL CI audit, THREAT_MODEL, invariant tests, deprecated API migration** |
+| Contract address | 0x626c...2852 | **0xb3Fb...4069** (Wave 2 deploy) |
 
-**What FHE encrypts in CipherPay:**
-- Invoice amounts (`euint64`) — Etherscan shows only ciphertext handles
-- Recipient addresses (`eaddress`) — who gets paid is hidden
-- Collected payment totals — computed via `FHE.add()` on ciphertext
+**What's novel in Wave 2 (no other project has these):**
+
+1. **Nullifier-based anon claim** — `keccak256(deviceSecret ‖ invoiceHash)` stored instead of address. Etherscan shows zero identity data for the payer. Double-spend prevented without recording who paid.
+
+2. **Shielded balance pool** — payer pre-funds any ETH bucket. Actual payment tx has `msg.value = 0` — Etherscan shows no ETH transfer, breaking amount correlation entirely.
+
+3. **Checkout embed** — merchants add one `<script>` tag. FHE encryption runs in sandboxed iframe. Parent page gets only `cipherpay:paid` event. Stripe-like DX for private payments.
+
+4. **Donation type** — open-ended FHE invoice with no target threshold. All amounts accepted, no `FHE.gte` gating.
+
+5. **Deprecated API migration** — migrated from `FHE.decrypt()` (deprecated April 13 2026) to `allowPublic + decryptForTx + publishDecryptResult` two-phase pattern. Running ahead of the deprecation curve.
+
+6. **ACL CI enforcement** — `scripts/audit-acl.cts` parses all `.sol` files, whitelists every `FHE.allowGlobal` grant, exits 1 on unauthorized. Runs in CI. No accidental data exposure.
+
+**What FHE encrypts in CipherPay (cumulative):**
+- Invoice amounts (`euint64`) — Etherscan shows only handles
+- Recipient addresses (`eaddress`) — hidden on Etherscan
+- Collected payment totals — `FHE.add()` on ciphertext
 - Tax calculations — `FHE.mul()` + `FHE.div()` on encrypted basis points
-- Subscription tiers (`euint8`) and expiry (`euint64`)
+- Subscription tiers (`euint8`) + expiry (`euint64`)
 - Per-user metrics: totalSent, totalReceived, invoiceCount
-- Shared invoice individual shares — each participant sees only their own
-- Platform aggregate volume — only owner decrypts via `FHE.allowGlobal()`
+- Shared invoice individual shares
+- Platform aggregate volume — `FHE.allowGlobal()` only
+- Shielded balance per address — bucket size not leaked
+- Anon claim result — no payer identity stored
 
-**Verify on Etherscan:** Open the [FHE contract](https://sepolia.etherscan.io/address/0x626c1661cF0b72E47E9FcA0BF96d0D1A70d42852) → click any transaction → Input Data shows ciphertext handles (not human-readable amounts). Internal transactions show real ETH moving through escrow.
-
-**Why this matters:** No other project in this wave combines encrypted amounts + encrypted recipients + encrypted tax + encrypted analytics + encrypted subscriptions + encrypted bill splitting in a single protocol with real ETH settlement.
+**Verify on Etherscan:** [Wave 2 contract](https://sepolia.etherscan.io/address/0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069) — Input Data shows ciphertext handles. Anon claim txs have no `from` address in events. Shielded payments have `msg.value = 0`.
 
 ---
 

@@ -15,11 +15,17 @@ interface EncryptedAmountProps {
   compact?: boolean; // smaller size for tables
 }
 
+type PermitState = 'idle' | 'missing' | 'expired' | 'rejected' | 'ok';
+
+const PERMIT_EXPLAINER_KEY = 'cipherpay:permitExplainerSeen';
+
 export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = 'ETH', compact = false }: EncryptedAmountProps) {
   const [revealed, setRevealed] = useState(false);
   const [revealedValue, setRevealedValue] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
-  const { isReady, decrypt, createFreshPermit, getFheTypes } = useCofhe();
+  const [permitState, setPermitState] = useState<PermitState>('idle');
+  const [showExplainer, setShowExplainer] = useState(false);
+  const { isReady, decrypt, createFreshPermit, getFheTypes, cofheClient } = useCofhe();
   const { addToast } = useToastStore();
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -31,6 +37,16 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
       setRevealedValue(null);
       return;
     }
+
+    // First time? Show the inline explainer before triggering MetaMask.
+    // The explainer's "Continue" button re-calls handleReveal with the
+    // explainer dismissed.
+    try {
+      if (typeof window !== 'undefined' && !window.localStorage.getItem(PERMIT_EXPLAINER_KEY)) {
+        setShowExplainer(true);
+        return;
+      }
+    } catch {}
 
     // If we already know the amount (Simple contract fallback)
     if (knownAmount && parseFloat(knownAmount) > 0) {
@@ -60,9 +76,44 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
 
     setIsDecrypting(true);
     try {
-      // Step 1: Get or create permit (EIP-712)
-      addToast('info', 'Sign the permit in your wallet...');
-      await createFreshPermit(address);
+      // Step 1: Inspect existing permit before triggering a wallet popup,
+      // so we can give the user an explicit reason if it's missing/expired.
+      let existingPermit: any = null;
+      try {
+        existingPermit = cofheClient?.permits?.getActivePermit?.() ?? null;
+      } catch { existingPermit = null; }
+
+      if (!existingPermit) {
+        setPermitState('missing');
+        addToast('info', 'No permit found — sign one in your wallet to decrypt');
+      } else {
+        const expiresAt = Number(existingPermit.expiration ?? existingPermit.expiresAt ?? 0);
+        if (expiresAt && expiresAt * 1000 < Date.now()) {
+          setPermitState('expired');
+          addToast('warning', 'Permit expired — re-sign in your wallet');
+        } else {
+          setPermitState('ok');
+        }
+      }
+
+      try {
+        await createFreshPermit(address);
+        setPermitState('ok');
+      } catch (permitErr: any) {
+        const m = (permitErr?.message || '').toLowerCase();
+        if (m.includes('reject') || m.includes('denied') || permitErr?.code === 4001) {
+          setPermitState('rejected');
+          addToast('warning', 'Permit signature rejected — reveal cancelled');
+        } else if (m.includes('expired')) {
+          setPermitState('expired');
+          addToast('warning', 'Permit expired — please re-sign');
+        } else {
+          setPermitState('missing');
+          addToast('error', `Permit creation failed: ${permitErr?.message?.slice(0, 80) || 'unknown'}`);
+        }
+        setIsDecrypting(false);
+        return;
+      }
 
       // Step 2: Get encrypted handle from FHE contract
       const ctHash = await publicClient.readContract({
@@ -110,14 +161,22 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
         }
       } catch {}
 
-      if (err.message?.includes('User rejected') || err.message?.includes('denied')) {
+      const msg = (err?.message || '').toLowerCase();
+      if (msg.includes('user rejected') || msg.includes('denied') || err?.code === 4001) {
+        setPermitState('rejected');
         addToast('warning', 'Permit signature rejected');
+      } else if (msg.includes('permitexpired') || msg.includes('expired')) {
+        setPermitState('expired');
+        addToast('warning', 'Permit expired — click reveal again to re-sign');
+      } else if (msg.includes('permitnotfound') || msg.includes('no active permit') || msg.includes('missing permit')) {
+        setPermitState('missing');
+        addToast('warning', 'No active permit — click reveal again to sign');
       } else {
         addToast('error', 'Decryption failed — check permissions');
       }
     }
     setIsDecrypting(false);
-  }, [revealed, knownAmount, isReady, invoiceHash, publicClient, decrypt, createFreshPermit, getFheTypes, addToast]);
+  }, [revealed, knownAmount, isReady, invoiceHash, publicClient, decrypt, createFreshPermit, getFheTypes, addToast, cofheClient, address]);
 
   const textSize = compact ? 'text-sm' : 'text-lg';
 
@@ -162,12 +221,35 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
         </AnimatePresence>
       </div>
 
+      {/* Permit-state hint (shows when last reveal needs a re-sign) */}
+      {!revealed && permitState !== 'idle' && permitState !== 'ok' && (
+        <span
+          className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+            permitState === 'expired' ? 'text-amber-400 bg-amber-500/10' :
+            permitState === 'missing' ? 'text-blue-400 bg-blue-500/10' :
+            'text-red-400 bg-red-500/10'
+          }`}
+          title={
+            permitState === 'expired' ? 'Your decrypt permit has expired — click the eye to re-sign' :
+            permitState === 'missing' ? 'No active decrypt permit — click the eye to sign one' :
+            'Permit signature was rejected — click the eye to retry'
+          }
+        >
+          {permitState === 'expired' ? 'Permit expired' : permitState === 'missing' ? 'Sign permit' : 'Sign rejected'}
+        </span>
+      )}
+
       {/* Reveal/Hide button */}
       <button
         onClick={handleReveal}
         disabled={isDecrypting}
         className="p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-primary/10 transition-all disabled:opacity-50"
-        title={revealed ? 'Hide amount' : 'Reveal amount (requires FHE permit)'}
+        title={
+          revealed ? 'Hide amount' :
+          permitState === 'expired' ? 'Re-sign expired permit and reveal' :
+          permitState === 'missing' ? 'Sign decrypt permit and reveal' :
+          'Reveal amount (requires FHE permit)'
+        }
       >
         {isDecrypting ? (
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -177,6 +259,53 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
           <Eye className="w-4 h-4" />
         )}
       </button>
+
+      {/* First-time permit explainer — shown once per browser, before the
+          first MetaMask popup, to explain WHY a signature is needed. */}
+      {showExplainer && (
+        <div
+          className="fixed inset-0 z-[10002] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowExplainer(false)}
+        >
+          <div
+            className="max-w-md w-full bg-surface-1 border border-border-default rounded-2xl p-6 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider">FHE permit</span>
+              <h3 className="text-base font-bold text-white">One-time signature</h3>
+            </div>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              CipherPay is about to ask your wallet to sign a permit. This is a free,
+              gas-less EIP-712 signature — <strong className="text-white">not a transaction</strong>.
+            </p>
+            <div className="bg-bg-base border border-border-default rounded-lg p-3 space-y-2 text-xs text-text-secondary">
+              <div className="flex gap-2"><span className="text-primary">•</span><span>The permit lets <strong className="text-white">only you</strong> decrypt this amount via the FHE Threshold Network.</span></div>
+              <div className="flex gap-2"><span className="text-primary">•</span><span>The smart contract still doesn't know the plaintext value — it stays encrypted on-chain.</span></div>
+              <div className="flex gap-2"><span className="text-primary">•</span><span>The permit expires automatically and is revocable anytime in Settings.</span></div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowExplainer(false)}
+                className="flex-1 py-2.5 rounded-xl bg-surface-2 text-text-secondary text-sm font-bold hover:bg-surface-3 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  try { window.localStorage.setItem(PERMIT_EXPLAINER_KEY, '1'); } catch {}
+                  setShowExplainer(false);
+                  // Re-trigger reveal — now the localStorage flag is set so it skips the modal
+                  setTimeout(() => handleReveal(), 50);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-primary text-black text-sm font-bold hover:opacity-90 transition-opacity"
+              >
+                Continue & sign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,8 @@ import {
   Copy,
   LogOut,
   Bell,
-  Users
+  Users,
+  EyeOff,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
@@ -169,30 +170,34 @@ export function AppSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 space-y-6 py-2">
+        {/* Three primary actions — promoted per UX feedback (Wave 2 hardening) */}
         <SidebarSection label="Main">
+          <SidebarItem icon={Plus} label="Create Invoice" path="/app/new-cipher" isActive={location.pathname === '/app/new-cipher'} badge="NEW" badgeColor="bg-primary text-black" />
           <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/app/dashboard" isActive={location.pathname === '/app/dashboard'} />
-          <SidebarItem icon={Plus} label="New Cipher" path="/app/new-cipher" isActive={location.pathname === '/app/new-cipher'} badge="NEW" badgeColor="bg-primary text-black" />
           <SidebarItem icon={Search} label="Explorer" path="/app/explorer" isActive={location.pathname === '/app/explorer'} />
         </SidebarSection>
 
-        <SidebarSection label="Invoices">
+        {/* Privacy features — new in Wave 2 */}
+        <SidebarSection label="Privacy">
+          <SidebarItem icon={EyeOff} label="Anon Claim" path="/app/anon-claim" isActive={location.pathname === '/app/anon-claim'} badge="NEW" badgeColor="bg-primary text-black" />
+        </SidebarSection>
+
+        {/* Everything else collapsed — defaults closed so the main flow stays clean */}
+        <SidebarSection label="Advanced">
           <SidebarItem icon={History} label="Payment Proofs" path="/app/proofs" isActive={location.pathname === '/app/proofs'} />
           <SidebarItem icon={Repeat} label="Recurring" path="/app/recurring" isActive={location.pathname === '/app/recurring'} />
           <SidebarItem icon={Users} label="Shared Invoice" path="/app/shared" isActive={location.pathname === '/app/shared'} />
+          <SidebarItem icon={User} label="My Identity" path="/app/identity" isActive={location.pathname === '/app/identity'} />
+          <SidebarItem icon={Settings} label="Settings" path="/app/settings" isActive={location.pathname === '/app/settings'} />
+          <SidebarItem icon={Code} label="Build" path="/app/build" isActive={location.pathname === '/app/build'} />
+          <SidebarItem icon={BookOpen} label="Guide" path="/app/guide" isActive={location.pathname === '/app/guide'} />
+        </SidebarSection>
+
+        <SidebarSection label="Coming soon">
           <SidebarItem icon={Zap} label="Batch Cipher" path="/app/batch" isComingSoon badge="W3" badgeColor="bg-surface-3 text-text-dim" />
           <SidebarItem icon={Gift} label="Cipher Drop" path="/app/cipher-drop" isComingSoon badge="W3" badgeColor="bg-surface-3 text-text-dim" />
           <SidebarItem icon={Shield} label="Salary Proof" path="/app/compliance/salary" isComingSoon badge="W4" badgeColor="bg-surface-3 text-text-dim" />
           <SidebarItem icon={BookOpen} label="Audit Center" path="/app/compliance/audit" isComingSoon badge="W4" badgeColor="bg-surface-3 text-text-dim" />
-        </SidebarSection>
-
-        <SidebarSection label="Account">
-          <SidebarItem icon={User} label="My Identity" path="/app/identity" isActive={location.pathname === '/app/identity'} />
-          <SidebarItem icon={Settings} label="Settings" path="/app/settings" isActive={location.pathname === '/app/settings'} />
-        </SidebarSection>
-
-        <SidebarSection label="More">
-          <SidebarItem icon={Code} label="Build" path="/app/build" isActive={location.pathname === '/app/build'} />
-          <SidebarItem icon={BookOpen} label="Guide" path="/app/guide" isActive={location.pathname === '/app/guide'} />
         </SidebarSection>
       </div>
 

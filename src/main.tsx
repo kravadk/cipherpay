@@ -29,6 +29,8 @@ import { PaymentProofs } from './pages/app/PaymentProofs';
 import { SharedInvoicePage } from './pages/app/SharedInvoicePage';
 import { Claim } from './pages/Claim';
 import { Pay } from './pages/Pay';
+import { Checkout } from './pages/Checkout';
+import { AnonClaim } from './pages/app/AnonClaim';
 import { Profile } from './pages/Profile';
 import { ToastContainer } from './components/ToastContainer';
 
@@ -51,6 +53,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             {/* Public claim & pay pages (no sidebar) */}
             <Route path="/claim/:hash" element={<Claim />} />
             <Route path="/pay/:hash" element={<Pay />} />
+            <Route path="/checkout/:hash" element={<Checkout />} />
             <Route path="/profile/:address" element={<Profile />} />
 
             {/* App Routes */}
@@ -69,6 +72,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="proofs" element={<PaymentProofs />} />
               <Route path="shared" element={<SharedInvoicePage />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="anon-claim" element={<AnonClaim />} />
             </Route>
 
             {/* Fallback */}

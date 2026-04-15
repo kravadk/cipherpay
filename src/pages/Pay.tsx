@@ -33,6 +33,7 @@ export function Pay() {
   const [invoiceContract, setInvoiceContract] = useState<string>(CIPHERPAY_SIMPLE_ADDRESS);
   const [invoice, setInvoice] = useState<any>(null);
   const [invoiceAmount, setInvoiceAmount] = useState<string | null>(null);
+  const [shieldedBal, setShieldedBal] = useState<bigint>(0n);
   const [collected, setCollected] = useState<{ collected: string; target: string; payerCount: number } | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -227,6 +228,15 @@ export function Pay() {
 
   const isRecurringDeposited = recurringSchedule && recurringSchedule.totalPeriods > 0;
 
+  // Fetch shielded balance — determines whether to use shielded pay path (msg.value=0)
+  useEffect(() => {
+    if (!address || !publicClient) return;
+    publicClient.readContract({
+      address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+      functionName: 'shieldedBalance', args: [address],
+    }).then((b: any) => setShieldedBal(BigInt(b))).catch(() => setShieldedBal(0n));
+  }, [address, publicClient, payStatus]);
+
   const handleClaimRecurring = async () => {
     if (!address || !hash || !publicClient) return;
     setPayStatus('paying');
@@ -390,19 +400,32 @@ export function Pay() {
           throw new Error('Encryption service not ready. Please wait and try again.');
         }
 
-        addLog(`> Sending ${amountToPay} ETH to contract...`);
         const encTuple = {
           ctHash: BigInt(encryptedPayment.ctHash || encryptedPayment.data?.ctHash || 0),
           securityZone: encryptedPayment.securityZone ?? encryptedPayment.data?.securityZone ?? 0,
           utype: encryptedPayment.utype ?? encryptedPayment.data?.utype ?? 5,
           signature: encryptedPayment.signature ?? encryptedPayment.data?.signature ?? '0x',
         };
-        tx = await writeContractAsync({
-          address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-          functionName: 'payInvoice',
-          args: [hash as `0x${string}`, encTuple],
-          value: amountWei,
-        } as any);
+
+        // Shielded path — when the payer has enough prefunded balance,
+        // msg.value is 0 so the tx envelope leaks no per-invoice amount.
+        const useShielded = shieldedBal >= amountWei;
+        if (useShielded) {
+          addLog(`> Shielded balance: ${formatEther(shieldedBal)} ETH — using shielded path (msg.value = 0)`);
+          tx = await writeContractAsync({
+            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+            functionName: 'payInvoiceShielded',
+            args: [hash as `0x${string}`, encTuple, amountWei],
+          } as any);
+        } else {
+          addLog(`> Sending ${amountToPay} ETH to contract...`);
+          tx = await writeContractAsync({
+            address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+            functionName: 'payInvoice',
+            args: [hash as `0x${string}`, encTuple],
+            value: amountWei,
+          } as any);
+        }
       }
 
       addLog(`> Transaction: ${tx.slice(0, 14)}...`);

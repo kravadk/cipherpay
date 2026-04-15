@@ -2,7 +2,7 @@
 export const CIPHERPAY_SIMPLE_ADDRESS = '0xF3A15EC0FAE753D6BEC3AAB3aEB2d72824c0713F' as const;
 
 // FHE contract (encrypted amounts via Fhenix CoFHE)
-export const CIPHERPAY_FHE_ADDRESS = '0x626c1661cF0b72E47E9FcA0BF96d0D1A70d42852' as const;
+export const CIPHERPAY_FHE_ADDRESS = '0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069' as const;
 
 // Module contracts
 export const PAYMENT_PROOF_ADDRESS = '0x54C22cdF7B65E64C75EeEF565E775503C7657293' as const;
@@ -157,7 +157,8 @@ export const CIPHERPAY_ABI = [
     ],
     outputs: [{ name: '', type: 'bool' }],
   },
-  // Async decrypt — two-phase pattern
+  // Async decrypt — two-phase pattern (FHE.decrypt deprecated April 13 2026)
+  // Phase 1: requestFullyPaidCheck → FHE.allowPublic
   {
     name: 'requestFullyPaidCheck',
     type: 'function',
@@ -165,6 +166,19 @@ export const CIPHERPAY_ABI = [
     inputs: [{ name: '_invoiceHash', type: 'bytes32' }],
     outputs: [],
   },
+  // Phase 2: off-chain decryptForTx → on-chain publishPaidCheckResult
+  {
+    name: 'publishPaidCheckResult',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: '_invoiceHash', type: 'bytes32' },
+      { name: '_plaintext', type: 'bool' },
+      { name: '_signature', type: 'bytes' },
+    ],
+    outputs: [],
+  },
+  // Read stored result after phase 2
   {
     name: 'getFullyPaidResult',
     type: 'function',
