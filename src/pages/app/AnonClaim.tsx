@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
-import { parseEther, keccak256, toBytes, encodePacked } from 'viem';
-import { Shield, Eye, EyeOff, Loader2, Copy, AlertTriangle, Check, Lock, RefreshCw } from 'lucide-react';
+import { parseEther, formatEther, keccak256, toBytes, encodePacked } from 'viem';
+import { Shield, Eye, EyeOff, Loader2, Copy, AlertTriangle, Check, Lock, RefreshCw, ArrowDownToLine } from 'lucide-react';
 import { useCofhe } from '../../hooks/useCofhe';
 import { useToastStore } from '../../components/ToastContainer';
 import { CIPHERPAY_ADDRESS, CIPHERPAY_ABI } from '../../config/contract';
@@ -59,6 +59,11 @@ export function AnonClaim() {
   const [secret, setSecret] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
 
+  // Creator sweep state
+  const [invoiceCreator, setInvoiceCreator] = useState<string | null>(null);
+  const [anonPool, setAnonPool] = useState<bigint>(0n);
+  const [sweeping, setSweeping] = useState(false);
+
   const addLog = (msg: string) => setLogs(l => [...l, msg]);
 
   const checkInvoice = useCallback(async () => {
@@ -66,11 +71,23 @@ export function AnonClaim() {
     setStatus('checking');
     setErrMsg(null);
     try {
-      const enabled = await publicClient.readContract({
-        address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
-        functionName: 'anonEnabled', args: [invoiceHash as `0x${string}`],
-      }) as boolean;
+      const [enabled, invoice, pool] = await Promise.all([
+        publicClient.readContract({
+          address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+          functionName: 'anonEnabled', args: [invoiceHash as `0x${string}`],
+        }) as Promise<boolean>,
+        publicClient.readContract({
+          address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+          functionName: 'getInvoice', args: [invoiceHash as `0x${string}`],
+        }) as Promise<any>,
+        publicClient.readContract({
+          address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+          functionName: 'anonEthPool', args: [invoiceHash as `0x${string}`],
+        }) as Promise<bigint>,
+      ]);
       setAnonEnabled(enabled);
+      setInvoiceCreator(invoice?.creator ?? null);
+      setAnonPool(pool ?? 0n);
       if (enabled) {
         const s = getOrCreateSecret(invoiceHash);
         setSecret(s);
@@ -85,6 +102,25 @@ export function AnonClaim() {
       setErrMsg(e?.shortMessage || 'Invoice not found or contract unreachable');
     }
   }, [invoiceHash, publicClient, addToast]);
+
+  const handleSweep = useCallback(async () => {
+    if (!invoiceHash || !publicClient) return;
+    setSweeping(true);
+    try {
+      const tx = await writeContractAsync({
+        address: CIPHERPAY_ADDRESS, abi: CIPHERPAY_ABI as any,
+        functionName: 'sweepAnonPool',
+        args: [invoiceHash as `0x${string}`],
+      } as any);
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      setAnonPool(0n);
+      addToast('success', `Swept ${formatEther(anonPool)} ETH from anon pool`);
+    } catch (e: any) {
+      addToast('error', e?.shortMessage || 'Sweep failed');
+    } finally {
+      setSweeping(false);
+    }
+  }, [invoiceHash, publicClient, writeContractAsync, anonPool, addToast]);
 
   const handlePay = useCallback(async () => {
     if (!address || !publicClient || !fheReady || !secret) return;
@@ -285,6 +321,48 @@ export function AnonClaim() {
             )}
           </motion.div>
         ) : null}
+      </AnimatePresence>
+      {/* Creator: Sweep anon pool */}
+      <AnimatePresence>
+        {invoiceCreator && address?.toLowerCase() === invoiceCreator.toLowerCase() && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="bg-surface-1 border border-primary/20 rounded-2xl p-5 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-primary uppercase tracking-widest">Creator — Sweep Anon Pool</p>
+                <p className="text-xs text-text-muted">You created this invoice. Collect ETH paid anonymously.</p>
+              </div>
+              <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">Creator</span>
+            </div>
+
+            <div className="flex items-center justify-between bg-bg-base border border-border-default rounded-xl px-4 py-3">
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-text-muted uppercase tracking-wider">Anon pool balance</p>
+                <p className="text-lg font-bold text-white">
+                  {formatEther(anonPool)} <span className="text-sm text-text-muted font-normal">ETH</span>
+                </p>
+              </div>
+              {anonPool === 0n && (
+                <span className="text-xs text-text-dim">No funds yet</span>
+              )}
+            </div>
+
+            <button
+              onClick={handleSweep}
+              disabled={sweeping || anonPool === 0n}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-black font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
+            >
+              {sweeping
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Sweeping…</>
+                : <><ArrowDownToLine className="w-4 h-4" /> Sweep {anonPool > 0n ? formatEther(anonPool) + ' ETH' : '(empty)'} to your wallet</>}
+            </button>
+            <p className="text-[10px] text-text-muted text-center">
+              Funds are transferred to your wallet. Payer identities remain hidden — no link between this sweep and individual payments.
+            </p>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
