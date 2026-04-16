@@ -31,14 +31,14 @@ CipherPay fixes this by storing all financial data as FHE ciphertext (`euint64`,
 | | **CipherPay** | OnlyPaca | PrivPay | Zalary | LastVault | StealthFlow | HomoVault |
 |---|---|---|---|---|---|---|---|
 | **Contracts deployed** | **7** | 2 | 3 | ABI only | 0 | 0 FHE in deploy | 0 |
-| **Real FHE on-chain** | **Yes (25+ ops)** | Yes (10 ops) | Mocked | INCO (not Fhenix) | Not deployed | Fake (hex encode) | None |
-| **Invoice types** | **5** | 1 | 1 | 1 | 1 | 1 | 0 |
+| **Real FHE on-chain** | **Yes (33+ ops)** | Yes (10 ops) | Mocked | INCO (not Fhenix) | Not deployed | Fake (hex encode) | None |
+| **Invoice types** | **6** | 1 | 1 | 1 | 1 | 1 | 0 |
 | **Real ETH escrow** | **Yes + auto-settle** | Via relayer | Direct | USDC | No | Yes | No |
-| **Frontend pages** | **14** | 5 | 4 | 4 | 1 demo | 5 | 0 |
+| **Frontend pages** | **16** | 5 | 4 | 4 | 1 demo | 5 | 0 |
 | **Encrypted types** | euint64, eaddress, ebool, euint8, euint32, euint128 | euint8, euint64 | bytes (mock) | euint256 | eaddress, euint128 | bytes32 (plain) | — |
-| **Unique features** | QR, CSV, proofs, shared invoices, explorer, subscriptions, bill split, metrics, tax calc | Revenue range proofs, relayer | 3-role (vendor/payer/auditor) | cUSDC swap, TEE attestation | Dead-man's switch, encrypted heir | Time-lock UI | AI agent concept |
+| **Unique features** | QR, CSV, proofs, shared invoices, explorer, subscriptions, bill split, metrics, tax calc, **anon claim, shielded pool, checkout embed** | Revenue range proofs, relayer | 3-role (vendor/payer/auditor) | cUSDC swap, TEE attestation | Dead-man's switch, encrypted heir | Time-lock UI | AI agent concept |
 
-> CipherPay uses more FHE operations than all competitors combined. It is the only project with multiple invoice types, encrypted tax calculation, on-chain payment proofs, and a bill-splitting contract — all on Fhenix CoFHE.
+> CipherPay uses more FHE operations than all competitors combined. It is the only project with anonymous nullifier-based claiming, shielded balance pools (msg.value = 0), a merchant checkout embed, 6 invoice types, encrypted tax calculation, and a bill-splitting contract — all on Fhenix CoFHE.
 
 ### Who It's For
 
@@ -102,9 +102,10 @@ FHE.allowSender(amount);          // Creator can decrypt
 FHE.allowTransient(amount, addr); // Temporary access (current tx only)
 FHE.allowGlobal(platformVolume);  // Public aggregate stat
 
-// Async on-chain decrypt (two-phase)
-FHE.decrypt(isPaid);              // Request decryption
-FHE.getDecryptResultSafe(isPaid); // Poll result
+// Async on-chain decrypt (two-phase, post-April 2026 API)
+FHE.allowPublic(isPaid);          // Phase 1: make handle decryptable
+// Off-chain: decryptForTx(ctHash) → {plaintext, signature}
+// Phase 2: publishDecryptResult(hash, plaintext, sig)
 
 // Random encrypted value
 euint64 nonce = FHE.randomEuint64(); // Unpredictable on-chain
@@ -168,6 +169,7 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 | **Multi Pay** | Multiple payers contribute → progress via `FHE.add()` → creator settles → ETH transferred |
 | **Recurring** | Configurable frequency (daily / N days / weekly / bi-weekly / monthly) |
 | **Vesting** | Creator deposits ETH as escrow → locked until block height → recipient claims |
+| **Donation** | Open-ended amount — payer sets what to pay, no target, creator settles anytime |
 | **Batch** | CSV import → N recipients → encrypted amounts per recipient |
 
 ### Payment Flow
@@ -187,6 +189,9 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 - **Cancel with Refund** — automatically refunds all payers on cancellation
 - **Reveal (decrypt)** — click eye icon → sign EIP-712 permit → see decrypted amount
 - **Real ETH Transfers** — payments move real ETH via payable contract functions
+- **Shielded Balance Pool** — pre-fund ETH bucket, pay with msg.value = 0 (breaks Etherscan amount correlation)
+- **Anonymous Claim** — pay invoice without address on-chain; nullifier-based replay protection
+- **Checkout Embed** — merchants add `<script>` tag, FHE runs in sandboxed iframe
 
 ---
 
@@ -257,8 +262,9 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 - ✅ Checkout embed — `<script>` + sandboxed iframe + postMessage API
 - ✅ allowPublic + decryptForTx migration (deprecated FHE.decrypt removed)
 - ✅ ACL CI audit — blocks unauthorized allowGlobal in CI
-- ✅ Shielded invariant test suite — 11 tests, all passing
-- ✅ 16 app pages — Dashboard, Explorer, NewCipher, Pay, AnonClaim, Checkout, Recurring, SharedInvoice, PaymentProofs, Identity, Settings, Build, Guide, Profile, Claim + 1 more
+- ✅ Shielded invariant test suite — 11 Hardhat tests, all passing
+- ✅ E2E on-chain test suite — 35/35 passing on Sepolia (real FHE encryption via @cofhe/sdk Node.js)
+- ✅ 16 app pages — Dashboard, Explorer, NewCipher, Pay, AnonClaim, Checkout, Recurring, SharedInvoice, PaymentProofs, Identity, Settings, Build, Guide, Profile, Claim, BatchCSV
 - ✅ Vercel deployment with WASM support (COOP/COEP headers)
 
 ### Etherscan Proof
@@ -296,7 +302,7 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 
 **FHE Operations:** `asEuint64`, `asEaddress`, `add`, `sub`, `mul`, `div`, `min`, `max`, `gt`, `gte`, `eq`, `ne`, `not`, `select`, `allowSender`, `allow`, `allowTransient`, `allowGlobal`, `decrypt`, `getDecryptResultSafe`, `randomEuint64`
 
-**App:** 14 pages, 100% on-chain, COOP/COEP WASM, Vercel deployment, E2E test suite (31 tests)
+**App:** 14 pages, 100% on-chain, COOP/COEP WASM, Vercel deployment, E2E test suite (35 tests on Sepolia)
 
 ---
 
@@ -336,7 +342,7 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 - Permit UX overhaul: first-time explainer modal, pre-check permit state, distinct error badges (missing/expired/rejected)
 - `THREAT_MODEL.md` — 6 adversary types, explicit NOT-hidden list, ACL discipline, audit checklist
 
-**Deployed:** `0xaEa45e55A90AD78f8c6F954D94956f7BbA95F8cd` (Ethereum Sepolia)
+**Deployed:** `0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069` (Ethereum Sepolia) — [35/35 E2E tests passing](scripts/e2e-test.cts)
 
 ---
 
@@ -446,27 +452,48 @@ TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat compile --config hardhat.confi
 
 # Deploy FHE contract
 TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/deploy-fhe.cts --network eth-sepolia --config hardhat.config.cts
+
+# Run E2E tests (35 tests, real FHE on Sepolia)
+TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/e2e-test.cts --network eth-sepolia --config hardhat.config.cts
 ```
 
 ## Project Structure
 
 ```
 contracts/
-├── CipherPayFHE.sol           # Primary — euint64, FHE.add, FHE.allow
+├── CipherPayFHE.sol           # Primary — euint64, FHE.add, FHE.allow, anon claim, shielded pool
 ├── CipherPaySimple.sol        # Fallback — real ETH transfers, vesting escrow
 ├── CipherSubscription.sol     # FHE-encrypted subscription tiers
 └── CipherPay.sol              # Original FHE v1
 
+scripts/
+├── deploy-fhe.cts             # Deploy CipherPayFHE to Sepolia
+├── e2e-test.cts               # 35 on-chain tests with real FHE (2 wallets)
+└── audit-acl.cts              # CI: whitelist all FHE.allowGlobal grants
+
 src/
 ├── config/
-│   ├── contract.ts            # ABI + addresses (InEuint64 tuples)
+│   ├── contract.ts            # ABI + addresses (Wave 2 functions included)
 │   └── wagmi.ts               # Wagmi + Sepolia RPC
+├── components/
+│   ├── ShieldedBalance.tsx     # Deposit/withdraw shielded ETH, bucket picker
+│   └── EncryptedAmount.tsx     # Permit-based reveal with explainer modal
 ├── hooks/
-│   ├── useCofhe.ts            # CoFHE SDK — encrypt, decrypt, permits
+│   ├── useCofhe.ts            # CoFHE SDK — encrypt, decrypt, decryptForTx, permits
 │   ├── useInvoices.ts         # Read invoices from blockchain
 │   └── useNotifications.ts    # Parse on-chain events
-├── pages/                     # Dashboard, Explorer, NewCipher, Pay, Settings, etc.
-└── store/                     # Zustand — ephemeral UI state only (no data persistence)
+├── pages/
+│   ├── Pay.tsx                # Pay invoice — auto shielded path when balance available
+│   ├── Checkout.tsx           # Embeddable /checkout/:hash widget (iframe)
+│   └── app/
+│       ├── AnonClaim.tsx      # Anonymous pay + creator sweep UI
+│       ├── NewCipher.tsx      # Create invoice — 6 types + enableAnonClaim toggle
+│       ├── Build.tsx          # SDK docs + checkout embed live demo
+│       └── Dashboard.tsx      # Shielded balance + anon claim card
+└── store/                     # Zustand — ephemeral UI state only
+
+public/
+└── cipherpay.js               # Merchant embed script (modal + inline modes)
 ```
 
 ## Links
