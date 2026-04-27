@@ -4,7 +4,7 @@
 
 **Privacy-first invoice & payment protocol powered by Fhenix FHE**
 
-`15 contracts` · `55+ FHE operations` · `6 invoice types` · `24 app pages` · `Wave 5 ready`
+`15 contracts` · `57+ FHE operations` · `6 invoice types` · `24 app pages` · `All 5 waves complete`
 
 [![Ethereum Sepolia](https://img.shields.io/badge/Network-Ethereum_Sepolia-blue)](https://sepolia.etherscan.io)
 [![CoFHE SDK](https://img.shields.io/badge/CoFHE_SDK-0.5.1-green)](https://www.npmjs.com/package/@cofhe/sdk)
@@ -31,7 +31,7 @@ CipherPay fixes this by storing all financial data as FHE ciphertext (`euint64`,
 | | **CipherPay** | OnlyPaca | PrivPay | Zalary | LastVault | StealthFlow | HomoVault |
 |---|---|---|---|---|---|---|---|
 | **Contracts deployed** | **15** | 2 | 3 | ABI only | 0 | 0 FHE in deploy | 0 |
-| **Real FHE on-chain** | **Yes (55+ ops)** | Yes (10 ops) | Mocked | INCO (not Fhenix) | Not deployed | Fake (hex encode) | None |
+| **Real FHE on-chain** | **Yes (57+ ops)** | Yes (10 ops) | Mocked | INCO (not Fhenix) | Not deployed | Fake (hex encode) | None |
 | **Invoice types** | **6** | 1 | 1 | 1 | 1 | 1 | 0 |
 | **Real ETH escrow** | **Yes + auto-settle** | Via relayer | Direct | USDC | No | Yes | No |
 | **Frontend pages** | **24** | 5 | 4 | 4 | 1 demo | 5 | 0 |
@@ -284,10 +284,17 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 - ✅ Wave 4 UI — SalaryProof.tsx, AuditCenter.tsx, DAOTreasury.tsx (all with real FHE contract interaction)
 
 **Wave 5 (new contract + SDK):**
-- ✅ **FeeModule.sol** — `euint64` encrypted fee rate, `FHE.mul(amount, feeBps)`, `FHE.allowGlobal(platformRevenue)`, two-phase sweep
+- ✅ **FeeModule.sol** — `euint64 feeBps` encrypted fee rate, `FHE.mul(amount, feeBps)`, `FHE.allowGlobal(platformRevenue)`, two-phase sweep
 - ✅ **`@cipherpay/sdk`** — `sdk/` directory with `CipherPay.charge()`, `useCheckout()`, `useShieldedBalance()`, `CipherPayWebhooks` relay
 - ✅ **PrivacyAnalytics.tsx** — platform aggregate decrypt, Merkle existence proofs, differential privacy explainer, data visibility model
 - ✅ **24 app pages** total (16 existing + Batch, CipherDrop, MilestoneEscrow, RecurringScheduler, SalaryProof, AuditCenter, DAOTreasury, PrivacyAnalytics)
+
+**Frontend UX (post-wave polish):**
+- ✅ **FheTerminal** — tx hashes in deploy logs are clickable Etherscan links (`0x...64` regex, `ExternalLink` icon)
+- ✅ **URL-persistent tabs** — all 7 tabbed pages use `useSearchParams` (`?tab=create`) — deep-linkable, survives refresh
+- ✅ **CipherDrop deep-link** — `/claim/:hash` redirect auto-switches to claim tab and pre-fills Drop ID
+- ✅ **Manifesto roadmap** — all 5 waves shown as complete with accurate feature descriptions
+- ✅ **32 on-chain tests** (Wave 3–5) — `test-all-flows.cts` — all 8 new contracts covered
 
 ### Etherscan Proof
 
@@ -314,7 +321,7 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 
 ### Wave 1 ✅ Complete
 
-**Smart Contracts (7 deployed on Sepolia):**
+**Smart Contracts (6 deployed on Sepolia):**
 - [x] CipherPayFHE — 25+ FHE operations (euint64, euint32, euint8, euint128, eaddress, ebool)
 - [x] CipherPaySimple — real ETH escrow, vesting, pause/resume, cancel with refund
 - [x] CipherSubscription — FHE-encrypted subscription tiers + recurring payments
@@ -412,11 +419,6 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 - On-chain record: `AuditGranted(invoiceHash, auditor, scope, expiry)` — audit trail without data exposure
 - Tax reporting: export scoped permit for accountant — they see amounts but not recipient identities
 
-**Cross-chain invoice payment via CCTP**
-- Payer on Arbitrum Sepolia pays invoice on Ethereum Sepolia — USDC burned/minted via Circle CCTP v2
-- FHE verification runs on destination chain — `verifyPayment(cctp_attestation, encAmount)` checks amounts match
-- Invoice status updates when CCTP message arrives — cross-chain settlement without bridging ETH
-
 **Encrypted DAO treasury**
 - DAO votes encrypted budget allocations — each proposal stores `euint64 budget` 
 - Vote threshold via `FHE.gte(votesFor, quorum)` — outcome revealed only after vote closes
@@ -438,7 +440,7 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 - Merkle proof of invoice existence — prove an invoice was created at block N without revealing amount or parties
 
 **Platform fee module (self-funding)**
-- Configurable fee: `euint8 feeBps` — even the fee rate is encrypted (only owner decrypts)
+- Configurable fee: `euint64 feeBps` — even the fee rate is encrypted (only owner decrypts)
 - Fee is deducted via `FHE.mul(amount, feeBps)` — arithmetic on ciphertext, collected into `platformRevenue: euint64`
 - Owner calls `sweepRevenue()` → `FHE.allowPublic(platformRevenue)` + two-phase decrypt → ETH transferred
 - Individual fees never visible; only aggregate platform revenue is decryptable by owner
@@ -506,7 +508,7 @@ contracts/
 ├── SalaryProof.sol            # FHE.gte income proof → on-chain boolean (W4)
 ├── AuditCenter.sol            # Scoped FHE.allow audit packages (W4)
 ├── DAOTreasury.sol            # Encrypted euint64 budget + euint32 FHE votes (W4)
-└── FeeModule.sol              # euint8 encrypted fee rate + FHE.mul collection (W5)
+└── FeeModule.sol              # euint64 encrypted fee rate + FHE.mul collection (W5)
 
 scripts/
 ├── deploy-fhe.cts             # Deploy CipherPayFHE
@@ -604,7 +606,7 @@ CipherPay is the only project with **15 deployed contracts**, **57+ FHE operatio
 10. **Encrypted DAO votes** — `euint32` vote tallies via `FHE.add`, `FHE.gte(votesFor, quorum)` outcome revealed only after close.
 
 **Wave 5:**
-11. **Encrypted fee rate** — `euint64 feeBps` hidden fee. `FHE.mul(amount, feeBps)` fee collection. Only aggregate revenue is `allowGlobal`.
+11. **Encrypted fee rate** — `euint64 feeBps` hidden fee. `FHE.mul(amount, feeBps)` collection. Only aggregate revenue is `allowGlobal`.
 12. **`@cipherpay/sdk`** — `CipherPay.charge()`, `useCheckout()`, `CipherPayWebhooks` — Stripe-like DX for private payments.
 13. **Privacy analytics** — Merkle invoice existence proofs, differential privacy explainer, per-field visibility model.
 
