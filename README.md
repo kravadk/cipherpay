@@ -7,7 +7,7 @@
 `15 contracts` · `55+ FHE operations` · `6 invoice types` · `24 app pages` · `Wave 5 ready`
 
 [![Ethereum Sepolia](https://img.shields.io/badge/Network-Ethereum_Sepolia-blue)](https://sepolia.etherscan.io)
-[![CoFHE SDK](https://img.shields.io/badge/CoFHE_SDK-0.4.0-green)](https://www.npmjs.com/package/@cofhe/sdk)
+[![CoFHE SDK](https://img.shields.io/badge/CoFHE_SDK-0.5.1-green)](https://www.npmjs.com/package/@cofhe/sdk)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 Encrypted invoicing where amounts, recipients, and payment totals are hidden on-chain using Fully Homomorphic Encryption. The contract performs arithmetic on ciphertext — addition, comparison, conditional logic — without ever seeing plaintext. Only authorized parties decrypt via EIP-712 permits.
@@ -223,10 +223,10 @@ const amount = await cofheClient.decryptForView(ctHash, FheTypes.Uint64).execute
 | Layer | Technology | Why |
 |-------|-----------|-----|
 | FHE Coprocessor | Fhenix CoFHE | Encrypted computation on EVM without custom chain |
-| Client SDK | @cofhe/sdk 0.4.0 | Client-side TFHE encryption + ZK proofs |
+| Client SDK | @cofhe/sdk 0.5.1 | Client-side TFHE encryption + ZK proofs |
 | Contracts | @fhenixprotocol/cofhe-contracts 0.1.0 | Solidity FHE library (euint64, FHE.add, FHE.allow) |
 | Solidity | 0.8.25 (evmVersion: cancun) | Smart contract language |
-| Hardhat | @cofhe/hardhat-plugin 0.4.0 | Contract compilation + deployment |
+| Hardhat | @cofhe/hardhat-plugin 0.4.0 · node-tfhe 1.5.3 | Contract compilation + deployment |
 | Frontend | React 18 + TypeScript + Vite | App interface |
 | Wallet | Wagmi v2 + Viem | Wallet connection + contract interaction |
 | Styling | Tailwind CSS 4 + Framer Motion | UI + animations |
@@ -358,7 +358,7 @@ CoFHE ops: sub, min, add, gte... ← arithmetic on encrypted data
 - `/checkout/:hash` embeddable widget works standalone and in iframe
 
 **Security hardening (judge feedback addressed):**
-- Removed all legacy `cofhejs@0.3.1` + `cofhe-hardhat-plugin@0.3.1` deps — migrated to `@cofhe/sdk@0.4` + `@cofhe/hardhat-plugin@0.4`
+- Removed all legacy `cofhejs@0.3.1` deps — migrated to `@cofhe/sdk@0.5.1` + `@cofhe/hardhat-plugin@0.4` + `node-tfhe@1.5.3`
 - `FHE.allowPublic` + `decryptForTx` + `publishDecryptResult` — migrated from deprecated `FHE.decrypt()` (April 13 deprecation)
 - ACL least-privilege audit: removed redundant `allowTransient(self)` grants, documented all `allowGlobal` with CI enforcement (`scripts/audit-acl.cts`)
 - Permit UX overhaul: first-time explainer modal, pre-check permit state, distinct error badges (missing/expired/rejected)
@@ -482,8 +482,11 @@ TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat compile --config hardhat.confi
 # Deploy FHE contract
 TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/deploy-fhe.cts --network eth-sepolia --config hardhat.config.cts
 
-# Run E2E tests (35 tests, real FHE on Sepolia)
+# Run Wave 1-2 E2E tests (35 tests, real FHE on Sepolia)
 TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/e2e-test.cts --network eth-sepolia --config hardhat.config.cts
+
+# Run Wave 3-5 full-flow tests (32 tests, all 8 new contracts)
+TS_NODE_PROJECT=tsconfig.hardhat.json npx hardhat run scripts/test-all-flows.cts --network eth-sepolia --config hardhat.config.cts
 ```
 
 ## Project Structure
@@ -515,7 +518,9 @@ scripts/
 ├── deploy-audit.cts           # Deploy AuditCenter (W4)
 ├── deploy-dao.cts             # Deploy DAOTreasury (W4)
 ├── deploy-fee.cts             # Deploy FeeModule (W5)
-├── e2e-test.cts               # 35 on-chain tests with real FHE (2 wallets)
+├── e2e-test.cts               # 35 on-chain tests — Wave 1-2 (real FHE, 2 wallets)
+├── test-all-flows.cts         # 32 on-chain tests — Wave 3-5 (all 8 new contracts)
+├── test-wave3-5.cts           # 36 quick validation tests — Wave 3-5 contracts
 └── audit-acl.cts              # CI: whitelist all FHE.allowGlobal grants
 
 sdk/                           # @cipherpay/sdk npm package (W5)
@@ -599,7 +604,7 @@ CipherPay is the only project with **15 deployed contracts**, **57+ FHE operatio
 10. **Encrypted DAO votes** — `euint32` vote tallies via `FHE.add`, `FHE.gte(votesFor, quorum)` outcome revealed only after close.
 
 **Wave 5:**
-11. **Encrypted fee rate** — `euint8 feeBps` hidden fee. `FHE.mul(amount, feeBps)` fee collection. Only aggregate revenue is `allowGlobal`.
+11. **Encrypted fee rate** — `euint64 feeBps` hidden fee. `FHE.mul(amount, feeBps)` fee collection. Only aggregate revenue is `allowGlobal`.
 12. **`@cipherpay/sdk`** — `CipherPay.charge()`, `useCheckout()`, `CipherPayWebhooks` — Stripe-like DX for private payments.
 13. **Privacy analytics** — Merkle invoice existence proofs, differential privacy explainer, per-field visibility model.
 

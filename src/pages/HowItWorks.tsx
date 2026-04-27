@@ -180,7 +180,7 @@ export function HowItWorks() {
             </div>
             <div className="space-y-1">
               <p className="text-xs text-text-muted uppercase tracking-widest">Expiry</p>
-              <p className="text-sm text-white font-mono">2026-03-20 15:00 UTC</p>
+              <p className="text-sm text-white font-mono">2026-07-20 15:00 UTC</p>
             </div>
             <div className="h-[1px] bg-border-default w-full" />
             <div className="flex justify-between items-center">

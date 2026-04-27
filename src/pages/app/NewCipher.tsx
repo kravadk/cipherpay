@@ -63,8 +63,8 @@ export function NewCipher() {
   const { writeContractAsync } = useWriteContract();
   const { isReady: isFheReady, encrypt, getEncryptable, isConnecting: isFheConnecting } = useCofhe();
 
-  const disabledTypes = new Set<CipherType>(['vesting']);
-  const typeWave: Record<string, string> = { vesting: 'W2', batch: 'W3' };
+  const disabledTypes = new Set<CipherType>();
+  const typeWave: Record<string, string> = {};
 
   const types: { id: CipherType; label: string; icon: any; color: string; desc?: string }[] = [
     { id: 'standard', label: 'Standard', icon: Shield, color: 'text-primary' },

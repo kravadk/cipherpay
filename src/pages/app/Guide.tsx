@@ -381,7 +381,7 @@ Selective disclosure lets you satisfy each requirement with minimum information 
   'Installation': `# SDK Installation
 
 \`\`\`bash
-npm install @cofhe/sdk@0.4.0 @fhenixprotocol/cofhe-contracts@0.1.0 wagmi viem
+npm install @cofhe/sdk@0.5.1 @fhenixprotocol/cofhe-contracts@0.1.0 wagmi viem
 \`\`\`
 
 ## Quick Setup

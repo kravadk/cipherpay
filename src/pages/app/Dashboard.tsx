@@ -284,19 +284,11 @@ export function Dashboard() {
             GET PAID PRIVATELY <ArrowUpRight className="w-6 h-6" />
           </Button>
         </Link>
-        <div className="flex-1 relative group" title="Cipher Drop ships in Wave 3">
-          <Button
-            variant="secondary"
-            className="w-full h-[52px] text-lg gap-3 opacity-50 cursor-not-allowed"
-            onClick={(e: any) => e.preventDefault()}
-            disabled
-          >
+        <Link to="/app/cipher-drop" className="flex-1">
+          <Button variant="secondary" className="w-full h-[52px] text-lg gap-3">
             DISTRIBUTE PRIVATELY <ArrowDownRight className="w-6 h-6" />
           </Button>
-          <span className="absolute top-1 right-2 text-[9px] font-bold text-text-muted bg-surface-3 px-1.5 py-0.5 rounded uppercase tracking-wider">
-            W3
-          </span>
-        </div>
+        </Link>
       </div>
 
       {/* Balance removed — shown in sidebar */}

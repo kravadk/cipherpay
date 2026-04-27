@@ -40,7 +40,7 @@ const CODE_SNIPPETS = [
   {
     title: 'Installation',
     lang: 'bash',
-    code: 'npm install @cofhe/sdk@0.4.0 @fhenixprotocol/cofhe-contracts@0.1.0 wagmi viem',
+    code: 'npm install @cofhe/sdk@0.5.1 @fhenixprotocol/cofhe-contracts@0.1.0 wagmi viem',
   },
   {
     title: 'Initialize CoFHE Client',
@@ -215,7 +215,7 @@ export function Build() {
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-text-muted">SDK</span>
-            <span className="text-white font-mono text-xs">@cofhe/sdk@0.4.0</span>
+            <span className="text-white font-mono text-xs">@cofhe/sdk@0.5.1</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-text-muted">Encrypted Types Used</span>
