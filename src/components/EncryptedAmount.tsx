@@ -123,7 +123,6 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
 
       if (!ctHash || ctHash === 0n) {
         // No FHE amount — try Simple contract (plaintext)
-        console.log('[Reveal] No FHE ciphertext — reading from Simple contract');
         const simpleAbi = [{ name: 'getInvoiceAmount', type: 'function', stateMutability: 'view', inputs: [{ name: '_invoiceHash', type: 'bytes32' }], outputs: [{ name: '', type: 'uint256' }] }] as const;
         const amountRaw = await publicClient.readContract({
           address: CIPHERPAY_SIMPLE_ADDRESS, abi: simpleAbi as any,
@@ -137,10 +136,8 @@ export function EncryptedAmount({ invoiceHash, amount: knownAmount, currency = '
       }
 
       // Step 3: Decrypt via CoFHE Threshold Network
-      console.log('[Reveal] FHE ciphertext found (handle:', ctHash.toString().slice(0, 15) + '...) — requesting decryption via Threshold Network');
       const FheTypes = getFheTypes();
       const plaintext = await decrypt(ctHash, FheTypes.Uint64);
-      console.log('[Reveal] FHE decrypt SUCCESS via Threshold Network');
       setRevealedValue(formatEther(BigInt(plaintext)));
       setRevealed(true);
       addToast('success', 'Amount decrypted via FHE Threshold Network');
