@@ -33,6 +33,13 @@ import { Checkout } from './pages/Checkout';
 import { AnonClaim } from './pages/app/AnonClaim';
 import { Profile } from './pages/Profile';
 import { ToastContainer } from './components/ToastContainer';
+import { SalaryProof } from './pages/app/SalaryProof';
+import { AuditCenter } from './pages/app/AuditCenter';
+import { DAOTreasury } from './pages/app/DAOTreasury';
+import { MilestoneEscrow } from './pages/app/MilestoneEscrow';
+import { RecurringSchedulerPage } from './pages/app/RecurringSchedulerPage';
+import { PrivacyAnalytics } from './pages/app/PrivacyAnalytics';
+import { FeeModulePage } from './pages/app/FeeModulePage';
 
 const queryClient = new QueryClient();
 
@@ -73,6 +80,16 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="shared" element={<SharedInvoicePage />} />
               <Route path="settings" element={<Settings />} />
               <Route path="anon-claim" element={<AnonClaim />} />
+              {/* Wave 3 advanced */}
+              <Route path="milestone-escrow" element={<MilestoneEscrow />} />
+              <Route path="recurring-scheduler" element={<RecurringSchedulerPage />} />
+              {/* Wave 4 */}
+              <Route path="salary-proof" element={<SalaryProof />} />
+              <Route path="audit-center" element={<AuditCenter />} />
+              <Route path="dao-treasury" element={<DAOTreasury />} />
+              {/* Wave 5 */}
+              <Route path="privacy-analytics" element={<PrivacyAnalytics />} />
+              <Route path="fee-module" element={<FeeModulePage />} />
             </Route>
 
             {/* Fallback */}

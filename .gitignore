@@ -22,3 +22,5 @@ public/tfhe_bg.wasm
 .claude/
 .cursor/
 .aider/
+
+.vercel

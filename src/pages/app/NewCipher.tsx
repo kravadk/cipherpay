@@ -63,7 +63,7 @@ export function NewCipher() {
   const { writeContractAsync } = useWriteContract();
   const { isReady: isFheReady, encrypt, getEncryptable, isConnecting: isFheConnecting } = useCofhe();
 
-  const disabledTypes = new Set<CipherType>(['vesting', 'batch']);
+  const disabledTypes = new Set<CipherType>(['vesting']);
   const typeWave: Record<string, string> = { vesting: 'W2', batch: 'W3' };
 
   const types: { id: CipherType; label: string; icon: any; color: string; desc?: string }[] = [
@@ -420,16 +420,23 @@ export function NewCipher() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                   {types.map((t) => {
                     const isDisabled = disabledTypes.has(t.id);
+                    const isBatchType = t.id === 'batch';
                     return (
-                      <button key={t.id} onClick={() => !isDisabled && setType(t.id)}
+                      <button key={t.id}
+                        onClick={() => {
+                          if (isBatchType) { navigate('/app/batch'); return; }
+                          if (!isDisabled) setType(t.id);
+                        }}
                         className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-300 gap-3 ${
                           isDisabled ? 'bg-surface-2 border-border-default text-text-dim cursor-not-allowed opacity-50'
+                          : isBatchType ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:border-blue-400 cursor-pointer'
                           : type === t.id ? 'bg-primary/10 border-primary text-primary'
                           : 'bg-surface-2 border-border-default text-text-secondary hover:border-primary/40'
                         }`}>
-                        <t.icon className={`w-8 h-8 ${isDisabled ? 'text-text-dim' : type === t.id ? t.color : 'text-inherit'}`} />
+                        <t.icon className={`w-8 h-8 ${isDisabled ? 'text-text-dim' : isBatchType ? 'text-blue-400' : type === t.id ? t.color : 'text-inherit'}`} />
                         <span className="text-xs font-bold uppercase tracking-widest">{t.label}</span>
-                        {typeWave[t.id] && (
+                        {isBatchType && <span className="text-[8px] text-blue-400/70">→ /app/batch</span>}
+                        {typeWave[t.id] && !isBatchType && (
                           <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-surface-3 text-text-dim">{typeWave[t.id]}</span>
                         )}
                       </button>

@@ -1,0 +1,31 @@
+{
+  "name": "@cipherpay/sdk",
+  "version": "1.0.0",
+  "description": "CipherPay merchant SDK — Stripe-like API for FHE-encrypted private payments",
+  "main": "./dist/index.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react.esm.js",
+      "require": "./dist/react.js",
+      "types": "./dist/react.d.ts"
+    }
+  },
+  "keywords": ["cipherpay", "fhe", "privacy", "payments", "ethereum", "fhenix"],
+  "repository": "https://github.com/kravadk/cipherpay",
+  "license": "MIT",
+  "peerDependencies": {
+    "viem": "^2.0.0",
+    "wagmi": "^2.0.0",
+    "@cofhe/sdk": "^0.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
