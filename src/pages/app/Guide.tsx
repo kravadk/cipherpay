@@ -219,26 +219,6 @@ Pay multiple recipients privately in one transaction.
 
 > **Note:** In Wave 1, batch creates individual invoices. A single-transaction batch function is planned for Wave 2.`,
 
-  'Paying an Invoice': `# Paying an Invoice
-
-## Via Payment Link
-
-1. Open the payment link shared by the creator
-2. Connect your wallet
-3. Enter payment amount (FHE-encrypted amounts are hidden — enter the agreed amount)
-4. Click **"Pay"**
-5. CoFHE SDK encrypts your payment client-side
-6. Transaction sent to contract with encrypted \`InEuint64\` tuple
-
-## Via Dashboard
-
-1. Find the invoice in Explorer or Dashboard
-2. Click **"Pay"** in the actions column
-3. Same flow as above
-
-## What's Encrypted
-
-Your payment amount is encrypted before reaching the blockchain. The contract performs \`FHE.add(totalCollected, payment)\` — adding encrypted values without revealing them.`,
 
   'Tracking Status': `# Tracking Status
 
@@ -600,7 +580,13 @@ Because the invoice amount is FHE-encrypted, the Pay page cannot display it. The
 
 ## Multi Pay
 
-For multi-pay invoices, multiple payers can contribute. Each payment is individually encrypted. The payer count is public but amounts are not.`,
+For multi-pay invoices, multiple payers can contribute. Each payment is individually encrypted. The payer count is public but amounts are not.
+
+## Via Dashboard
+
+1. Find the invoice in Explorer or Dashboard
+2. Click **"Pay"** in the actions column
+3. Same flow as via payment link`,
 
   'Proof of Settlement': `# Proof of Settlement
 

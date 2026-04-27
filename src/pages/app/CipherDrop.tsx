@@ -4,6 +4,7 @@ import {
   AlertTriangle, Lock, Zap, Copy, Eye
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { parseEther, keccak256, encodePacked } from 'viem';
 import { Button } from '../../components/Button';
@@ -44,7 +45,10 @@ export function CipherDrop() {
   const { decryptHandle } = useTwoPhaseDecrypt();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab]       = useState<'campaigns' | 'claim'>('campaigns');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlDropId = searchParams.get('dropId') || '';
+  const activeTab = (searchParams.get('tab') as 'campaigns' | 'claim') || (urlDropId ? 'claim' : 'campaigns');
+  const setActiveTab = (tab: 'campaigns' | 'claim') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
   const [showWizard, setShowWizard]     = useState(false);
   const [wizardStep, setWizardStep]     = useState(1);
 
@@ -59,8 +63,8 @@ export function CipherDrop() {
   const [deploySuccess, setDeploySuccess] = useState(false);
   const [deployedDropId, setDeployedDropId] = useState('');
 
-  // Claim state machine
-  const [claimDropId, setClaimDropId]   = useState('');
+  // Claim state machine — pre-populate from URL ?dropId= (set by Claim.tsx redirect)
+  const [claimDropId, setClaimDropId]   = useState(urlDropId);
   const [claimBalance, setClaimBalance] = useState('');
   const [claimStep, setClaimStep]       = useState<ClaimStep>('idle');
   const [claimLogs, setClaimLogs]       = useState<string[]>([]);

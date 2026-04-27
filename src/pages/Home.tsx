@@ -2,7 +2,6 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Shield, Lock, Zap, CheckCircle, XCircle, Github, ExternalLink, Menu, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { FloatingMockCard } from '../components/FloatingMockCard';
-import { CounterStat } from '../components/CounterStat';
 import { HexGrid } from '../components/HexGrid';
 import { MagneticButton } from '../components/MagneticButton';
 import { Link } from 'react-router-dom';
@@ -260,19 +259,16 @@ export function Home() {
       <section className="bg-surface-1 border-y border-border-default py-16">
         <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center space-y-2">
-            <span className="text-5xl font-bold text-white">FHE</span>
-            <p className="text-sm text-text-muted uppercase tracking-widest">Fully Homomorphic Encryption</p>
+            <span className="text-5xl font-bold text-white">15</span>
+            <p className="text-sm text-text-muted uppercase tracking-widest">Contracts Deployed</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="text-center space-y-2">
-            <span className="text-5xl font-bold text-white">Sepolia</span>
-            <p className="text-sm text-text-muted uppercase tracking-widest">Live on Testnet</p>
+            <span className="text-5xl font-bold text-white">57+</span>
+            <p className="text-sm text-text-muted uppercase tracking-widest">FHE Operations</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-1">
-              <CounterStat value={100} className="text-5xl font-bold text-white" />
-              <span className="text-5xl font-bold text-white">%</span>
-            </div>
-            <p className="text-sm text-text-muted uppercase tracking-widest">On-chain Private</p>
+            <span className="text-5xl font-bold text-white">5</span>
+            <p className="text-sm text-text-muted uppercase tracking-widest">Waves Complete</p>
           </motion.div>
         </div>
       </section>

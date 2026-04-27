@@ -116,28 +116,34 @@ export function Manifesto() {
         <div className="relative space-y-12 before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-border-default">
           {[
             {
-              phase: 'Wave 1 (Current)',
-              title: 'Core Protocol + FHE',
-              items: ['Standard, Multi Pay, Recurring invoices', 'FHE encryption end-to-end (CoFHE SDK)', 'Real ETH transfers with auto-settle', 'Permit-based Reveal (decryptForView)'],
+              phase: 'Wave 1 — Complete',
+              title: 'Core FHE Invoice Protocol',
+              items: ['Standard, multi-pay, and recurring invoices', 'euint64 encrypted amounts via CoFHE SDK', 'Real ETH auto-settlement on Sepolia', 'Permit-based reveal (EIP-712 + decryptForView)'],
               active: true
             },
             {
-              phase: 'Wave 2',
-              title: 'Stablecoin Payments',
-              items: ['Confidential USDC via Privara SDK', 'FHE-encrypted stablecoin escrow', 'The Graph subgraph for events', 'Dual receipt system'],
-              active: false
+              phase: 'Wave 2 — Complete',
+              title: 'Anonymous Claims & Shielded Pool',
+              items: ['Anonymous invoice creation with nullifier', 'claimAnonymously — no sender-recipient link on-chain', 'Shielded deposit pool for unlinkable payouts', 'sweepAnonPool for creator withdrawals'],
+              active: true
             },
             {
-              phase: 'Wave 3',
-              title: 'Conditional Settlement',
-              items: ['Conditional escrow via Privara Gate', 'Recurring automation via Chainlink', 'Encrypted threshold milestones', 'Subscription management UI'],
-              active: false
+              phase: 'Wave 3 — Complete',
+              title: 'Batch, Drops & Milestones',
+              items: ['BatchCipher — FHE multi-recipient payroll', 'CipherDrop — FHE-gated airdrop (FHE.gte eligibility)', 'MilestoneEscrow — encrypted threshold release', 'RecurringScheduler — interval-based automation'],
+              active: true
             },
             {
-              phase: 'Wave 4-5',
-              title: 'Cross-chain + Mainnet',
-              items: ['Cross-chain payments via Circle CCTP', 'Dispute resolution with encrypted coverage', 'Platform fee module (encrypted)', 'Mainnet when CoFHE launches'],
-              active: false
+              phase: 'Wave 4 — Complete',
+              title: 'Payroll, Audits & DAO',
+              items: ['SalaryProof — zero-knowledge income attestation', 'AuditCenter — selective disclosure with expiry keys', 'DAOTreasury — encrypted quorum voting', 'FeeModule — encrypted protocol fee collection'],
+              active: true
+            },
+            {
+              phase: 'Wave 5 — Complete',
+              title: 'Checkout Embed & Donation Layer',
+              items: ['Embeddable payment widget (iframe / JS snippet)', 'Donation-type invoices with optional memo', 'Full E2E test suite — 35/35 flows on Sepolia', '15 contracts deployed, 57+ FHE operations'],
+              active: true
             }
           ].map((step, i) => (
             <motion.div
@@ -147,22 +153,16 @@ export function Manifesto() {
               viewport={{ once: true }}
               className="relative pl-20"
             >
-              <div className={`absolute left-6 top-0 w-4 h-4 rounded-full border-2 bg-bg-base z-10 ${
-                step.active ? 'border-primary' : 'border-border-default'
-              }`}>
-                {step.active && <div className="absolute inset-1 rounded-full bg-primary animate-pulse" />}
+              <div className="absolute left-6 top-0 w-4 h-4 rounded-full border-2 bg-bg-base z-10 border-primary">
+                <div className="absolute inset-1 rounded-full bg-primary" />
               </div>
-              <div className={`p-8 rounded-[32px] border ${
-                step.active ? 'bg-primary/5 border-primary/20' : 'bg-surface-1 border-border-default'
-              }`}>
-                <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${
-                  step.active ? 'text-primary' : 'text-text-muted'
-                }`}>{step.phase}</p>
+              <div className="p-8 rounded-[32px] border bg-primary/5 border-primary/20">
+                <p className="text-xs font-bold uppercase tracking-widest mb-2 text-primary">{step.phase}</p>
                 <h3 className="text-2xl font-bold text-white mb-6">{step.title}</h3>
                 <ul className="space-y-3">
                   {step.items.map((item, j) => (
                     <li key={j} className="flex items-center gap-3 text-sm text-text-secondary">
-                      <CheckCircle className={`w-4 h-4 ${step.active ? 'text-primary' : 'text-text-muted'}`} />
+                      <CheckCircle className="w-4 h-4 text-primary" />
                       {item}
                     </li>
                   ))}

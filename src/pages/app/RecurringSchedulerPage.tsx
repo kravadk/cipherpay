@@ -4,6 +4,7 @@ import {
   Clock, Zap, Play, Terminal
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { parseEther } from 'viem';
 import { Button } from '../../components/Button';
@@ -57,7 +58,9 @@ export function RecurringSchedulerPage() {
   const { decryptHandle } = useTwoPhaseDecrypt();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab] = useState<'create' | 'schedules'>('create');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'create' | 'schedules') || 'create';
+  const setActiveTab = (tab: 'create' | 'schedules') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
   const [isCreating, setIsCreating] = useState(false);
   const [createLogs, setCreateLogs] = useState<string[]>([]);
   const [createDone, setCreateDone] = useState(false);

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef } from 'react';
-import { Terminal } from 'lucide-react';
+import { Terminal, ExternalLink } from 'lucide-react';
 
 interface FheTerminalProps {
   logs: string[];
@@ -9,6 +9,34 @@ interface FheTerminalProps {
   /** Max visible height in px (default 140) */
   maxHeight?: number;
   className?: string;
+}
+
+const TX_HASH_RE = /\b(0x[0-9a-fA-F]{64})\b/g;
+
+function renderLineWithLinks(line: string) {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  TX_HASH_RE.lastIndex = 0;
+  while ((match = TX_HASH_RE.exec(line)) !== null) {
+    if (match.index > last) parts.push(line.slice(last, match.index));
+    const hash = match[1];
+    parts.push(
+      <a
+        key={match.index}
+        href={`https://sepolia.etherscan.io/tx/${hash}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline hover:text-primary/80 inline-flex items-center gap-0.5"
+      >
+        {hash.slice(0, 10)}…{hash.slice(-6)}
+        <ExternalLink className="w-2.5 h-2.5 inline" />
+      </a>
+    );
+    last = match.index + hash.length;
+  }
+  if (last < line.length) parts.push(line.slice(last));
+  return parts.length > 1 ? parts : line;
 }
 
 function classifyLine(line: string): { color: string; prefix?: string } {
@@ -73,7 +101,7 @@ export function FheTerminal({ logs, active = false, maxHeight = 140, className =
                 transition={{ duration: 0.15 }}
                 className={`whitespace-pre-wrap break-all ${color}`}
               >
-                {line}
+                {renderLineWithLinks(line)}
               </motion.p>
             );
           })}

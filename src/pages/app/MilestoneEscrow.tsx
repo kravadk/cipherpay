@@ -4,6 +4,7 @@ import {
   TrendingUp, Zap, ArrowRight, Eye, Unlock
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { parseEther } from 'viem';
 import { Button } from '../../components/Button';
@@ -51,7 +52,9 @@ export function MilestoneEscrow() {
   const { isReady: isFheReady, encrypt, getEncryptable, decrypt, getFheTypes } = useCofhe();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab] = useState<'create' | 'escrows'>('create');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'create' | 'escrows') || 'create';
+  const setActiveTab = (tab: 'create' | 'escrows') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
   const [isCreating, setIsCreating] = useState(false);
   const [createLogs, setCreateLogs] = useState<string[]>([]);
   const [createDone, setCreateDone] = useState(false);

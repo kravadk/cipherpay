@@ -5,6 +5,7 @@ import {
   Play, Zap, DollarSign
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { Button } from '../../components/Button';
@@ -59,7 +60,9 @@ export function DAOTreasury() {
   const { decryptHandle } = useTwoPhaseDecrypt();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab] = useState<'proposals' | 'create' | 'members'>('proposals');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'proposals' | 'create' | 'members') || 'proposals';
+  const setActiveTab = (tab: 'proposals' | 'create' | 'members') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
   const [isCreating, setIsCreating] = useState(false);
   const [createLogs, setCreateLogs] = useState<string[]>([]);
   const [createDone, setCreateDone] = useState(false);

@@ -4,7 +4,7 @@ import {
   AlertTriangle, Download, RefreshCw, PackageOpen, Gift, Lock
 } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { Button } from '../../components/Button';
@@ -45,7 +45,9 @@ export function Batch() {
   const { isReady: isFheReady, encrypt, getEncryptable } = useCofhe();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab] = useState<'new' | 'history' | 'claim'>('new');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'new' | 'history' | 'claim') || 'new';
+  const setActiveTab = (tab: 'new' | 'history' | 'claim') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
   const [recipients, setRecipients] = useState<Recipient[]>([{ address: '', amount: '' }]);
   const [memo, setMemo] = useState('');
   const [isDeploying, setIsDeploying] = useState(false);

@@ -4,6 +4,7 @@ import {
   AlertTriangle, Eye, Copy, TrendingUp, FileCheck, XCircle
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient, useReadContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { Button } from '../../components/Button';
@@ -48,7 +49,9 @@ export function SalaryProof() {
   const { decryptHandle } = useTwoPhaseDecrypt();
   const { addToast } = useToastStore();
 
-  const [activeTab, setActiveTab] = useState<'record' | 'prove' | 'history'>('record');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'record' | 'prove' | 'history') || 'record';
+  const setActiveTab = (tab: 'record' | 'prove' | 'history') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
 
   // Record income
   const [incomeAmount, setIncomeAmount] = useState('');

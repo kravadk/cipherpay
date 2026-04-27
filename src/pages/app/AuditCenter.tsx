@@ -4,6 +4,7 @@ import {
   Lock, Unlock, Clock, RefreshCw, Copy, Eye, Trash2, UserCheck
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { Button } from '../../components/Button';
 import { FheTerminal } from '../../components/FheTerminal';
@@ -48,7 +49,9 @@ export function AuditCenter() {
 
   const { decrypt, getFheTypes } = useCofhe();
 
-  const [activeTab, setActiveTab]   = useState<'packages' | 'create' | 'auditor'>('packages');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as 'packages' | 'create' | 'auditor') || 'packages';
+  const setActiveTab = (tab: 'packages' | 'create' | 'auditor') => setSearchParams(p => { p.set('tab', tab); return p; }, { replace: true });
 
   // Auditor view state
   const [auditorPkgId, setAuditorPkgId]       = useState('');
