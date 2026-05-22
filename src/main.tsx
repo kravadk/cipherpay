@@ -40,6 +40,9 @@ import { MilestoneEscrow } from './pages/app/MilestoneEscrow';
 import { RecurringSchedulerPage } from './pages/app/RecurringSchedulerPage';
 import { PrivacyAnalytics } from './pages/app/PrivacyAnalytics';
 import { FeeModulePage } from './pages/app/FeeModulePage';
+import { PayrollToken } from './pages/app/PayrollToken';
+import { Proof } from './pages/app/Proof';
+import { PrivaraSettlement } from './pages/app/PrivaraSettlement';
 
 const queryClient = new QueryClient();
 
@@ -90,6 +93,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               {/* Wave 5 */}
               <Route path="privacy-analytics" element={<PrivacyAnalytics />} />
               <Route path="fee-module" element={<FeeModulePage />} />
+              <Route path="payroll-token" element={<PayrollToken />} />
+              <Route path="privara" element={<PrivaraSettlement />} />
+              <Route path="proof" element={<Proof />} />
             </Route>
 
             {/* Fallback */}

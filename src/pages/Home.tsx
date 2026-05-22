@@ -124,11 +124,11 @@ export function Home() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-surface-2 border border-border-default rounded-full mb-8 z-10"
         >
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Now live on Ethereum Sepolia</span>
+          <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">Confidential payroll · Live on Ethereum Sepolia</span>
         </motion.div>
 
         <div className="text-6xl md:text-8xl font-bold text-white tracking-tighter mb-8 z-10">
-          <TypeWriter text="Private Payments." />
+          <TypeWriter text="Confidential Payroll." />
           <br />
           <motion.span
             initial={{ opacity: 0 }}
@@ -136,7 +136,7 @@ export function Home() {
             transition={{ delay: 1.5, duration: 0.8 }}
             className="text-text-secondary"
           >
-            Verifiable Trust.
+            Provably Paid.
           </motion.span>
         </div>
 
@@ -146,7 +146,7 @@ export function Home() {
           transition={{ delay: 2 }}
           className="max-w-2xl text-lg md:text-xl text-text-secondary mb-12 z-10 leading-relaxed"
         >
-          Encrypted invoices powered by Fhenix FHE. Create, pay, and settle — without revealing amounts, identities, or strategy.
+          Pay your team, contractors, and DAO contributors on-chain — salaries encrypted end-to-end by Fhenix FHE. Amounts, recipients, and totals stay private; every payout stays provable.
         </motion.p>
 
         <motion.div
@@ -259,16 +259,16 @@ export function Home() {
       <section className="bg-surface-1 border-y border-border-default py-16">
         <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center space-y-2">
-            <span className="text-5xl font-bold text-white">15</span>
-            <p className="text-sm text-text-muted uppercase tracking-widest">Contracts Deployed</p>
+            <span className="text-4xl md:text-5xl font-bold text-white">Encrypted</span>
+            <p className="text-sm text-text-muted uppercase tracking-widest">Every salary stored as euint64 ciphertext</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="text-center space-y-2">
-            <span className="text-5xl font-bold text-white">57+</span>
-            <p className="text-sm text-text-muted uppercase tracking-widest">FHE Operations</p>
+            <span className="text-4xl md:text-5xl font-bold text-white">Provable</span>
+            <p className="text-sm text-text-muted uppercase tracking-widest">Prove income above a threshold, amount stays hidden</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="text-center space-y-2">
-            <span className="text-5xl font-bold text-white">5</span>
-            <p className="text-sm text-text-muted uppercase tracking-widest">Waves Complete</p>
+            <span className="text-4xl md:text-5xl font-bold text-white">Auditable</span>
+            <p className="text-sm text-text-muted uppercase tracking-widest">Scoped, time-limited disclosure for auditors</p>
           </motion.div>
         </div>
       </section>
@@ -417,14 +417,14 @@ export function Home() {
               <img src="/logo.png" alt="CipherPay" className="w-8 h-8 rounded-lg" />
               <span className="text-lg font-bold text-white">CipherPay</span>
             </div>
-            <p className="text-sm text-text-muted leading-relaxed">Privacy-first invoice protocol powered by Fhenix FHE on Ethereum Sepolia.</p>
+            <p className="text-sm text-text-muted leading-relaxed">Confidential payroll rail powered by Fhenix FHE on Ethereum Sepolia.</p>
           </div>
           <div className="space-y-4">
             <p className="text-xs font-bold text-text-muted uppercase tracking-widest">Protocol</p>
             <div className="space-y-2">
               <a href="https://fhenix.io" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors">Fhenix <ExternalLink className="w-3 h-3" /></a>
               <a href="https://cofhe-docs.fhenix.zone" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors">CoFHE Docs <ExternalLink className="w-3 h-3" /></a>
-              <a href="https://sepolia.etherscan.io/address/0x39655b5171577e91AFB57d86a48c6D39D51f20eb" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors">Contract <ExternalLink className="w-3 h-3" /></a>
+              <a href="https://sepolia.etherscan.io/address/0x305eF265BD964fBe34913E70Ef6AA8951e6b662e" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-text-secondary hover:text-primary transition-colors">Contract <ExternalLink className="w-3 h-3" /></a>
             </div>
           </div>
           <div className="space-y-4">

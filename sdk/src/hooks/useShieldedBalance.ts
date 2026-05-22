@@ -16,7 +16,7 @@ import { useAccount, useReadContract, useWriteContract, usePublicClient } from '
 import { parseEther, formatEther } from 'viem';
 
 // Import from the app's contract config
-const CIPHERPAY_FHE_ADDRESS = '0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069' as const;
+const CIPHERPAY_FHE_ADDRESS = '0x305eF265BD964fBe34913E70Ef6AA8951e6b662e' as const;
 
 const SHIELDED_ABI = [
   { name: 'depositShielded',  type: 'function', stateMutability: 'payable',    inputs: [],                                        outputs: [] },

@@ -1,31 +1,54 @@
 {
-  "name": "@cipherpay/sdk",
-  "version": "1.0.0",
-  "description": "CipherPay merchant SDK — Stripe-like API for FHE-encrypted private payments",
+  "name": "cipherpay-sdk",
+  "version": "0.1.0",
+  "description": "Confidential payroll & payments SDK for CipherPay on Fhenix FHE — encrypted payouts, webhooks, and React hooks.",
+  "license": "MIT",
+  "repository": "https://github.com/kravadk/cipherpay",
+  "type": "module",
+  "files": ["dist", "README.md"],
   "main": "./dist/index.js",
-  "module": "./dist/index.esm.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.esm.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./react": {
-      "import": "./dist/react.esm.js",
-      "require": "./dist/react.js",
-      "types": "./dist/react.d.ts"
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
     }
   },
-  "keywords": ["cipherpay", "fhe", "privacy", "payments", "ethereum", "fhenix"],
-  "repository": "https://github.com/kravadk/cipherpay",
-  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "fhe",
+    "fhenix",
+    "cofhe",
+    "confidential",
+    "payroll",
+    "payments",
+    "ethereum",
+    "web3"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "peerDependencies": {
-    "viem": "^2.0.0",
-    "wagmi": "^2.0.0",
-    "@cofhe/sdk": "^0.4.0"
+    "@cofhe/sdk": ">=0.5.0",
+    "react": ">=18.0.0",
+    "viem": ">=2.0.0",
+    "wagmi": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "wagmi": { "optional": true }
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.0.0",
+    "typescript": "~5.8.2"
   }
 }

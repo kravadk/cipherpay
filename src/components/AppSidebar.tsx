@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Search, Plus, Repeat, Zap, Gift, History,
-  User, Settings, Shield, Code, BookOpen, ChevronDown, Copy,
-  LogOut, Users, EyeOff, BarChart2, Target, DollarSign, X,
+  LayoutDashboard, Search, Plus, Repeat, Gift, History, Coins,
+  User, Settings, Shield, ShieldCheck, Code, BookOpen, ChevronDown, Copy,
+  LogOut, Users, EyeOff, BarChart2, Target, DollarSign, X, Layers,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useCallback } from 'react';
@@ -200,26 +200,29 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
 
       {/* Nav */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 no-scrollbar">
-        <SidebarSection label="Main">
+        <SidebarSection label="Payroll" badge="FEATURED">
+          <SidebarItem icon={Users} label="Batch Payout" path="/app/batch" isActive={isAt('/app/batch')} onNavigate={nav} />
+          <SidebarItem icon={Repeat} label="Recurring Payroll" path="/app/recurring-scheduler" isActive={isAt('/app/recurring-scheduler')} onNavigate={nav} />
+          <SidebarItem icon={Shield} label="Salary Proof" path="/app/salary-proof" isActive={isAt('/app/salary-proof')} onNavigate={nav} />
+          <SidebarItem icon={BookOpen} label="Audit Center" path="/app/audit-center" isActive={isAt('/app/audit-center')} onNavigate={nav} />
+          <SidebarItem icon={DollarSign} label="DAO Treasury" path="/app/dao-treasury" isActive={isAt('/app/dao-treasury')} onNavigate={nav} />
+          <SidebarItem icon={Coins} label="Payroll Token" path="/app/payroll-token" isActive={isAt('/app/payroll-token')} onNavigate={nav} />
+          <SidebarItem icon={Layers} label="Privara Settle" path="/app/privara" isActive={isAt('/app/privara')} onNavigate={nav} />
+        </SidebarSection>
+
+        <SidebarSection label="Invoicing">
           <SidebarItem icon={Plus} label="Create Invoice" path="/app/new-cipher" isActive={isAt('/app/new-cipher')} badge="NEW" badgeColor="bg-primary/15 text-primary" onNavigate={nav} />
           <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/app/dashboard" isActive={isAt('/app/dashboard')} onNavigate={nav} />
           <SidebarItem icon={Search} label="Explorer" path="/app/explorer" isActive={isAt('/app/explorer')} onNavigate={nav} />
+          <SidebarItem icon={ShieldCheck} label="Proof" path="/app/proof" isActive={isAt('/app/proof')} onNavigate={nav} />
         </SidebarSection>
 
-        <SidebarSection label="Privacy" badge="FEATURED">
+        <SidebarSection label="Privacy Tools">
           <SidebarItem icon={EyeOff} label="Anon Claim" path="/app/anon-claim" isActive={isAt('/app/anon-claim')} onNavigate={nav} />
-          <SidebarItem icon={Zap} label="Batch Cipher" path="/app/batch" isActive={isAt('/app/batch')} badge="W3" badgeColor="bg-blue-500/15 text-blue-400" onNavigate={nav} />
-          <SidebarItem icon={Gift} label="Cipher Drop" path="/app/cipher-drop" isActive={isAt('/app/cipher-drop')} badge="W3" badgeColor="bg-blue-500/15 text-blue-400" onNavigate={nav} />
-          <SidebarItem icon={Target} label="Milestone" path="/app/milestone-escrow" isActive={isAt('/app/milestone-escrow')} badge="W3" badgeColor="bg-blue-500/15 text-blue-400" onNavigate={nav} />
-          <SidebarItem icon={Repeat} label="FHE Recurring" path="/app/recurring-scheduler" isActive={isAt('/app/recurring-scheduler')} badge="W3" badgeColor="bg-blue-500/15 text-blue-400" onNavigate={nav} />
-        </SidebarSection>
-
-        <SidebarSection label="Compliance">
-          <SidebarItem icon={Shield} label="Salary Proof" path="/app/salary-proof" isActive={isAt('/app/salary-proof')} badge="W4" badgeColor="bg-purple-500/15 text-purple-400" onNavigate={nav} />
-          <SidebarItem icon={BookOpen} label="Audit Center" path="/app/audit-center" isActive={isAt('/app/audit-center')} badge="W4" badgeColor="bg-purple-500/15 text-purple-400" onNavigate={nav} />
-          <SidebarItem icon={Users} label="DAO Treasury" path="/app/dao-treasury" isActive={isAt('/app/dao-treasury')} badge="W4" badgeColor="bg-purple-500/15 text-purple-400" onNavigate={nav} />
-          <SidebarItem icon={BarChart2} label="Privacy Analytics" path="/app/privacy-analytics" isActive={isAt('/app/privacy-analytics')} badge="W5" badgeColor="bg-yellow-500/15 text-yellow-400" onNavigate={nav} />
-          <SidebarItem icon={DollarSign} label="Fee Module" path="/app/fee-module" isActive={isAt('/app/fee-module')} badge="W5" badgeColor="bg-yellow-500/15 text-yellow-400" onNavigate={nav} />
+          <SidebarItem icon={Gift} label="Cipher Drop" path="/app/cipher-drop" isActive={isAt('/app/cipher-drop')} onNavigate={nav} />
+          <SidebarItem icon={Target} label="Milestone Escrow" path="/app/milestone-escrow" isActive={isAt('/app/milestone-escrow')} onNavigate={nav} />
+          <SidebarItem icon={BarChart2} label="Privacy Analytics" path="/app/privacy-analytics" isActive={isAt('/app/privacy-analytics')} onNavigate={nav} />
+          <SidebarItem icon={DollarSign} label="Fee Module" path="/app/fee-module" isActive={isAt('/app/fee-module')} onNavigate={nav} />
         </SidebarSection>
 
         <SidebarSection label="Advanced" defaultOpen={false}>

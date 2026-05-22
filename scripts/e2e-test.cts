@@ -34,7 +34,7 @@ const { privateKeyToAccount } = require('viem/accounts');
 
 // ─── config ─────────────────────────────────────────────────────────────────
 
-const CONTRACT = '0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069';
+const CONTRACT = '0x305eF265BD964fBe34913E70Ef6AA8951e6b662e';
 const RPC = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
 const PK_A = process.env.PRIVATE_KEY as `0x${string}`;
 const PK_B = process.env.PRIVATE_KEY_B as `0x${string}`;

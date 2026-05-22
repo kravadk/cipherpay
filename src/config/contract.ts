@@ -1,13 +1,13 @@
 // Simple contract (plaintext amounts — MVP fallback)
-export const CIPHERPAY_SIMPLE_ADDRESS = '0xF3A15EC0FAE753D6BEC3AAB3aEB2d72824c0713F' as const;
+export const CIPHERPAY_SIMPLE_ADDRESS = '0x5F4999829D57f714497343f5677e66e6A56238E3' as const;
 
 // FHE contract (encrypted amounts via Fhenix CoFHE)
-export const CIPHERPAY_FHE_ADDRESS = '0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069' as const;
+export const CIPHERPAY_FHE_ADDRESS = '0x305eF265BD964fBe34913E70Ef6AA8951e6b662e' as const;
 
 // Module contracts
-export const PAYMENT_PROOF_ADDRESS = '0x54C22cdF7B65E64C75EeEF565E775503C7657293' as const;
-export const SHARED_INVOICE_ADDRESS = '0xd12eAcAD8FD0cd82894d819f4fb5e4E9168eB746' as const;
-export const INVOICE_METRICS_ADDRESS = '0x02ae50D014Ed6E627Aacd92A7E8C057F662b25eF' as const;
+export const PAYMENT_PROOF_ADDRESS = '0xa3B5c8276C06C812e5d0aC266c30cF83e36d76d1' as const;
+export const SHARED_INVOICE_ADDRESS = '0xE4dFef03E107225f2239CFfF955a378A9a8158Be' as const;
+export const INVOICE_METRICS_ADDRESS = '0xec7608730978B68A8D8c36B5d1f131634621116D' as const;
 
 // Use FHE contract as primary
 export const CIPHERPAY_ADDRESS = CIPHERPAY_FHE_ADDRESS;
@@ -444,18 +444,22 @@ export const INVOICE_STATUS_MAP: Record<number, string> = {
 };
 
 // ── Wave 3 contract addresses ────────────────────────────────────────────────
-export const BATCH_CIPHER_ADDRESS        = '0xD0A780aCEf824a26B8bfA772b068fa27D827e44B' as const;
-export const CIPHER_DROP_ADDRESS         = '0xeF22AbFB0564b98fBa43d5317D30C6A57fF84425' as const;
-export const MILESTONE_ESCROW_ADDRESS    = '0x6c546AA11565018436D0503DaD0751d12A18ff12' as const;
-export const RECURRING_SCHEDULER_ADDRESS = '0xAB92E9Ef65532A0Ae4E157F5193f3A206335DE58' as const;
+export const BATCH_CIPHER_ADDRESS        = '0x347fb466f3c9bC031560b49973ec05BdAdD2d4C4' as const;
+export const CIPHER_DROP_ADDRESS         = '0x74F75532428A99E613a865C97D1084b7f38241BD' as const;
+export const MILESTONE_ESCROW_ADDRESS    = '0x98e1E3A36796a42feC93B1971F9C7714f3D16FF4' as const;
+export const RECURRING_SCHEDULER_ADDRESS = '0xdB4F6A0CC67B3dF1f25129079E3f45b996A4B9D7' as const;
 
 // ── Wave 4 contract addresses ────────────────────────────────────────────────
-export const SALARY_PROOF_ADDRESS  = '0xA333Be9a1F92136873bC03Ff62292dCc85730206' as const;
-export const AUDIT_CENTER_ADDRESS  = '0xA1dc239e041Eb1505e01B75A4E30ba04b776DE60' as const;
-export const DAO_TREASURY_ADDRESS  = '0x834EAb3ef3238371A24A53A94407408c029299EC' as const;
+export const SALARY_PROOF_ADDRESS  = '0x7C23cE4d05D9A906c8aC3701cAA6070eA7bDc0bA' as const;
+export const AUDIT_CENTER_ADDRESS  = '0x747B6154De3895a4bfC8CF6eb42AF13E1C362d86' as const;
+export const DAO_TREASURY_ADDRESS  = '0x1084BCdc75356B4FF761bd420313FfA6194f5b95' as const;
 
 // ── Wave 5 contract addresses ────────────────────────────────────────────────
-export const FEE_MODULE_ADDRESS    = '0x4AF36795254bdF6aCA52f649468a9D596E7Ef13A' as const;
+export const FEE_MODULE_ADDRESS    = '0xAfBefEe6C72F34eA3f35004dA4F5bDA69D069A39' as const;
+
+// ── Payroll layer (confidential payroll rail) ────────────────────────────────
+export const PAYROLL_ANCHOR_ADDRESS = '0xdd8D14ae7bAf18a2e71a6B0Bfa41B4D16cBD4982' as const;
+export const PAYROLL_TOKEN_ADDRESS  = '0xBD9D748Dcd27baF163c8E400990744959A7D8Bfb' as const;
 
 // ── BatchCipher ABI ───────────────────────────────────────────────────────────
 export const BATCH_CIPHER_ABI = [

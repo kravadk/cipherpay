@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // @reineira-os/sdk hardcodes the Node entry of @cofhe/sdk. In a browser
+      // build the web entry is the correct, bundleable one (the app already
+      // uses @cofhe/sdk/web for its own FHE flows).
+      '@cofhe/sdk/node': '@cofhe/sdk/web',
     },
   },
   worker: {

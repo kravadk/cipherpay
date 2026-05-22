@@ -26,15 +26,15 @@ const { privateKeyToAccount } = require('viem/accounts');
 
 // ─── Contract addresses ────────────────────────────────────────────────────
 const ADDRS = {
-  CipherPayFHE:        '0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069',
-  BatchCipher:         '0xD0A780aCEf824a26B8bfA772b068fa27D827e44B',
-  CipherDrop:          '0xeF22AbFB0564b98fBa43d5317D30C6A57fF84425',
-  MilestoneEscrow:     '0x6c546AA11565018436D0503DaD0751d12A18ff12',
-  RecurringScheduler:  '0xAB92E9Ef65532A0Ae4E157F5193f3A206335DE58',
-  SalaryProof:         '0xA333Be9a1F92136873bC03Ff62292dCc85730206',
-  AuditCenter:         '0xA1dc239e041Eb1505e01B75A4E30ba04b776DE60',
-  DAOTreasury:         '0x834EAb3ef3238371A24A53A94407408c029299EC',
-  FeeModule:           '0x4AF36795254bdF6aCA52f649468a9D596E7Ef13A',
+  CipherPayFHE:        '0x305eF265BD964fBe34913E70Ef6AA8951e6b662e',
+  BatchCipher:         '0x347fb466f3c9bC031560b49973ec05BdAdD2d4C4',
+  CipherDrop:          '0x74F75532428A99E613a865C97D1084b7f38241BD',
+  MilestoneEscrow:     '0x98e1E3A36796a42feC93B1971F9C7714f3D16FF4',
+  RecurringScheduler:  '0xdB4F6A0CC67B3dF1f25129079E3f45b996A4B9D7',
+  SalaryProof:         '0x7C23cE4d05D9A906c8aC3701cAA6070eA7bDc0bA',
+  AuditCenter:         '0x747B6154De3895a4bfC8CF6eb42AF13E1C362d86',
+  DAOTreasury:         '0x1084BCdc75356B4FF761bd420313FfA6194f5b95',
+  FeeModule:           '0xAfBefEe6C72F34eA3f35004dA4F5bDA69D069A39',
 };
 
 const RPC  = process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';

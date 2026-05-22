@@ -19,6 +19,25 @@ export interface ChargeResult {
   blockNumber?: bigint;
 }
 
+export interface PayrollRecipient {
+  address: string;   // recipient wallet address
+  amount:  string;   // payout as a decimal ETH string, e.g. "2500.00"
+}
+
+export interface PayrollOptions {
+  recipients:  PayrollRecipient[];           // 1–100 rows per batch
+  memo?:       string;                       // batch label, e.g. "April Payroll"
+  onProgress?: (step: string) => void;       // encryption / submission progress
+}
+
+export interface PayrollResult {
+  txHash:         string;
+  batchId?:       string;   // BatchCipher batch id, if returned by the receipt
+  recipientCount: number;
+  memo:           string;
+  blockNumber?:   bigint;
+}
+
 export type CheckoutStatus =
   | 'idle'
   | 'initializing_fhe'

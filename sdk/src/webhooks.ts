@@ -25,7 +25,7 @@ interface WebhookConfig {
   fromBlock?: bigint;
 }
 
-const DEFAULT_CONTRACT = '0xb3Fb5d67795CC2AaeFC4b843417DF9f45C864069';
+const DEFAULT_CONTRACT = '0x305eF265BD964fBe34913E70Ef6AA8951e6b662e';
 
 export class CipherPayWebhooks {
   private config: Required<WebhookConfig>;

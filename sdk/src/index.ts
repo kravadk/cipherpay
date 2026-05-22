@@ -1,28 +1,38 @@
 /**
- * @cipherpay/sdk
+ * cipherpay-sdk
  *
- * Stripe-like API for FHE-encrypted private payments via CipherPay.
+ * Confidential payroll & payments SDK for CipherPay on Fhenix FHE.
  *
- * Quick start:
+ * Node / server entry. React hooks are in the 'cipherpay-sdk/react' subpath.
+ *
+ * Run a confidential payroll:
  *   const cp = new CipherPay({ rpcUrl: 'https://...', privateKey: '0x...' });
- *   await cp.charge({ invoiceId: '0x...', amount: '0.01', currency: 'ETH' });
+ *   await cp.runPayroll({
+ *     recipients: [
+ *       { address: '0x...', amount: '2500.00' },
+ *       { address: '0x...', amount: '1800.00' },
+ *     ],
+ *     memo: 'April Payroll',
+ *   });
  *
- * Webhook server:
- *   CipherPay.webhooks.listen(port, secret, handler);
+ * Charge a single invoice:
+ *   await cp.charge({ invoiceId: '0x...', amount: '0.01' });
  *
- * React hook:
- *   import { useCheckout } from '@cipherpay/sdk/react';
- *   const { pay, status, txHash } = useCheckout(invoiceHash);
+ * Relay on-chain events to a webhook endpoint:
+ *   new CipherPayWebhooks({ rpcUrl, endpoint, secret }).start();
  */
 
-export { CipherPay }            from './CipherPay';
-export { useCheckout }          from './hooks/useCheckout';
-export { useShieldedBalance }   from './hooks/useShieldedBalance';
-export { CipherPayWebhooks }    from './webhooks';
+export { CipherPay }         from './CipherPay';
+export { CipherPayWebhooks } from './webhooks';
 export type {
   ChargeOptions,
   ChargeResult,
+  PayrollOptions,
+  PayrollRecipient,
+  PayrollResult,
   CheckoutState,
+  CheckoutStatus,
   WebhookEvent,
   InvoiceType,
+  CipherPayConfig,
 } from './types';

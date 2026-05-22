@@ -1,37 +1,44 @@
 import { motion } from 'framer-motion';
 import { BarChart2, Lock, Globe, Shield, RefreshCw, Eye, TrendingUp, Hash } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useReadContract } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, type Hex } from 'viem';
 import { Button } from '../../components/Button';
 import { useToastStore } from '../../components/ToastContainer';
 import { useCofhe } from '../../hooks/useCofhe';
+import { useInvoices } from '../../hooks/useInvoices';
+import { buildMerkleTree, getMerkleProof, verifyMerkleProof } from '../../lib/merkle';
 import { CIPHERPAY_ADDRESS, CIPHERPAY_ABI } from '../../config/contract';
 
-// Merkle proof of invoice existence — prove invoice was created at block N
-// without revealing amount or parties (Wave 5 feature)
+// Real keccak256 Merkle existence proof over the caller's invoice hashes.
+// Invoice hashes are public on-chain; amounts and recipients never enter the tree.
 function MerkleProofWidget() {
-  const [invoiceHash, setInvoiceHash] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [proof, setProof] = useState<string | null>(null);
+  const { invoices, isLoading } = useInvoices();
   const { addToast } = useToastStore();
+  const [selected, setSelected] = useState('');
+  const [result, setResult] = useState<{ root: Hex; proof: Hex[]; valid: boolean } | null>(null);
 
-  const generateProof = async () => {
-    if (!invoiceHash.startsWith('0x') || invoiceHash.length !== 66) {
-      addToast('error', 'Enter a valid invoice hash');
+  // Build a real sorted-pair Merkle tree from the user's invoice hashes.
+  const tree = useMemo(
+    () => buildMerkleTree(invoices.map(i => i.hash as Hex)),
+    [invoices],
+  );
+
+  const generateProof = () => {
+    const leaf = selected as Hex;
+    if (!leaf || !leaf.startsWith('0x') || leaf.length !== 66) {
+      addToast('error', 'Select an invoice first');
       return;
     }
-    setIsGenerating(true);
-    // Merkle proof: keccak256(invoiceHash ‖ blockNumber) commitment
-    // In production: batch all invoice hashes into a Merkle tree, publish root
-    const { keccak256, encodePacked } = await import('viem');
-    const commitment = keccak256(encodePacked(
-      ['bytes32', 'uint256'],
-      [invoiceHash as `0x${string}`, BigInt(Date.now())]
-    ));
-    setProof(commitment);
-    setIsGenerating(false);
-    addToast('success', 'Merkle commitment generated');
+    const proof = getMerkleProof(tree, leaf);
+    if (!proof) {
+      addToast('error', 'That invoice is not in the tree');
+      return;
+    }
+    // Verify the proof by recomputing the root from leaf + sibling path.
+    const valid = verifyMerkleProof(leaf, proof, tree.root);
+    setResult({ root: tree.root, proof, valid });
+    addToast(valid ? 'success' : 'error', valid ? 'Merkle proof verified locally' : 'Proof failed to verify');
   };
 
   return (
@@ -39,26 +46,53 @@ function MerkleProofWidget() {
       <div className="flex items-center gap-3">
         <Hash className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold text-white">Invoice Existence Proof</h3>
-        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">W5</span>
       </div>
       <p className="text-xs text-text-secondary">
-        Prove an invoice existed at a given block without revealing amount, recipient, or creator.
-        Uses Merkle commitment: <code className="font-mono text-primary">keccak256(hash ‖ blockNumber)</code>.
+        A real keccak256 Merkle tree over your{' '}
+        <span className="text-primary font-bold">{tree.leaves.length}</span>{' '}
+        invoice {tree.leaves.length === 1 ? 'hash' : 'hashes'}. A proof shows an invoice
+        existed without revealing its amount or recipient. Anchor the root on-chain with{' '}
+        <code className="font-mono text-primary">PayrollAnchor.sol</code> to make it publicly checkable.
       </p>
-      <div className="flex gap-2">
-        <input
-          type="text" placeholder="Invoice hash (0x...)"
-          value={invoiceHash} onChange={e => setInvoiceHash(e.target.value)}
-          className="flex-1 h-10 px-3 bg-surface-2 border border-border-default rounded-xl text-white text-sm font-mono focus:border-primary/40 focus:outline-none"
-        />
-        <Button variant="outline" size="sm" onClick={generateProof} disabled={isGenerating}>
-          {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Prove'}
+
+      <div className="space-y-2">
+        <select
+          value={selected}
+          onChange={e => { setSelected(e.target.value); setResult(null); }}
+          className="w-full h-10 px-3 bg-surface-2 border border-border-default rounded-xl text-white text-sm focus:border-primary/40 focus:outline-none"
+        >
+          <option value="">{isLoading ? 'Loading invoices…' : 'Select an invoice'}</option>
+          {invoices.map(inv => (
+            <option key={inv.hash} value={inv.hash}>{inv.id} · {inv.type}</option>
+          ))}
+        </select>
+        <Button variant="outline" size="sm" className="w-full" onClick={generateProof} disabled={!selected}>
+          Generate Merkle proof
         </Button>
       </div>
-      {proof && (
-        <div className="p-3 bg-black rounded-xl">
-          <p className="text-xs font-mono text-primary break-all">{proof}</p>
-          <p className="text-xs text-text-muted mt-2">Commitment — submit on-chain to prove invoice existence</p>
+
+      {tree.leaves.length > 0 && (
+        <div className="p-3 bg-black rounded-xl space-y-1">
+          <p className="text-[10px] text-text-muted uppercase tracking-widest">Merkle root</p>
+          <p className="text-xs font-mono text-primary break-all">{tree.root}</p>
+        </div>
+      )}
+
+      {result && (
+        <div className="p-3 bg-black rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-text-muted uppercase tracking-widest">
+              Proof — {result.proof.length} {result.proof.length === 1 ? 'node' : 'nodes'}
+            </p>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${result.valid ? 'bg-primary/15 text-primary' : 'bg-red-500/15 text-red-400'}`}>
+              {result.valid ? '✓ Verified' : '✗ Invalid'}
+            </span>
+          </div>
+          {result.proof.length === 0
+            ? <p className="text-xs text-text-muted">Single-leaf tree — the root is the leaf itself.</p>
+            : result.proof.map((p, i) => (
+                <p key={i} className="text-xs font-mono text-text-secondary break-all">{p}</p>
+              ))}
         </div>
       )}
     </div>
@@ -144,35 +178,45 @@ function PlatformStats() {
   );
 }
 
-// Differential privacy explainer
+// Aggregate disclosure model — what CipherPay publishes vs. withholds.
 function DifferentialPrivacyCard() {
+  const rows = [
+    { label: 'Platform volume', tag: 'Published', mono: 'FHE.allowGlobal', note: 'Sum across all invoices — no single amount is derivable from it', pub: true },
+    { label: 'Invoice count', tag: 'Published', mono: 'FHE.allowGlobal', note: 'Total count across the protocol', pub: true },
+    { label: 'Per-invoice amount & recipient', tag: 'Withheld', mono: 'euint64 / eaddress', note: 'Decryptable only with an EIP-712 permit', pub: false },
+    { label: 'Payer count per invoice', tag: 'Withheld', mono: '—', note: 'Never published in anon mode', pub: false },
+  ];
+
   return (
     <div className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-4">
       <div className="flex items-center gap-3">
         <Shield className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-bold text-white">Differential Privacy</h3>
-        <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">W5</span>
+        <h3 className="text-lg font-bold text-white">Aggregate Disclosure Model</h3>
       </div>
       <p className="text-xs text-text-secondary">
-        Published aggregate stats have FHE-encrypted noise added so individual transactions
-        can't be reverse-engineered from the aggregate.
+        Only two aggregates are ever published, both via <code className="font-mono text-primary">FHE.allowGlobal</code>.
+        Every per-invoice field stays permit-gated.
       </p>
       <div className="space-y-3">
-        {[
-          { label: 'Platform volume', protection: 'FHE.add(volume, randomNoise)', note: 'Noise is encrypted — only aggregate is revealed' },
-          { label: 'Invoice count', protection: 'FHE.add(count, encryptedNoise)', note: 'Count bucketized to nearest 10' },
-          { label: 'Payer count per invoice', protection: 'Not published', note: 'No public payer count in anon mode' },
-        ].map(item => (
+        {rows.map(item => (
           <div key={item.label} className="flex items-start gap-3 p-3 bg-surface-2 rounded-xl">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${item.pub ? 'bg-blue-400' : 'bg-primary'}`} />
             <div>
-              <p className="text-sm font-bold text-white">{item.label}</p>
-              <p className="text-xs font-mono text-primary">{item.protection}</p>
+              <p className="text-sm font-bold text-white">
+                {item.label}
+                <span className={`ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${item.pub ? 'bg-blue-500/15 text-blue-400' : 'bg-primary/15 text-primary'}`}>{item.tag}</span>
+              </p>
+              <p className="text-xs font-mono text-text-secondary">{item.mono}</p>
               <p className="text-xs text-text-muted">{item.note}</p>
             </div>
           </div>
         ))}
       </div>
+      <p className="text-xs text-text-muted border-t border-border-default pt-3">
+        <span className="text-text-secondary font-bold">Planned:</span> encrypted noise on the
+        published aggregates (differential privacy) so a single large payout can't be inferred by
+        differencing snapshots. Not yet enabled — tracked in the roadmap.
+      </p>
     </div>
   );
 }
@@ -190,7 +234,7 @@ export function PrivacyAnalytics() {
         <BarChart2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
         <div className="text-xs text-text-secondary space-y-1">
           <p><span className="text-primary font-bold">Privacy-preserving analytics</span> — CipherPay exposes only two global FHE aggregates (<code className="font-mono">platformVolume</code> and <code className="font-mono">platformInvoiceCount</code>) via <code className="font-mono">FHE.allowGlobal</code>. All other data requires EIP-712 permits.</p>
-          <p>Differential privacy: encrypted noise added to aggregates. Merkle commitments for invoice existence proofs without data exposure.</p>
+          <p>Real keccak256 Merkle proofs verify invoice existence without exposing amounts or parties. Aggregate noise (differential privacy) is a planned hardening step.</p>
         </div>
       </div>
 
