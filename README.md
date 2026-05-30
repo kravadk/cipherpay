@@ -311,7 +311,7 @@ into a focused payroll rail:
 
 ## 🛡 Security
 
-See [`SECURITY.md`](SECURITY.md) for the honest self-audit and [`THREAT_MODEL.md`](THREAT_MODEL.md)
+See [`docs/SECURITY.md`](docs/SECURITY.md) for the honest self-audit and [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
 for the adversary model. Headline points:
 
 - Every `FHE.allow*` grant is CI-checked by `scripts/audit-acl.cts`.

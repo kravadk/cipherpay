@@ -8,7 +8,7 @@ For the full adversary model, see [`THREAT_MODEL.md`](./THREAT_MODEL.md).
 
 ## Scope
 
-All Solidity in [`contracts/`](./contracts/) — the payroll layers (`BatchCipher`,
+All Solidity in [`contracts/`](../contracts/) — the payroll layers (`BatchCipher`,
 `RecurringScheduler`, `SalaryProof`, `AuditCenter`, `DAOTreasury`, `FeeModule`), the
 invoicing core (`CipherPayFHE`, `CipherPaySimple`, …), and `PayrollAnchor`.
 
@@ -17,7 +17,7 @@ invoicing core (`CipherPayFHE`, `CipherPaySimple`, …), and `PayrollAnchor`.
 | Threat class | Status | Notes |
 |---|---|---|
 | **Reentrancy** | Reviewed | ETH transfers in `CipherPaySimple` / settlement paths follow checks-effects-interactions; state is updated before external `call`. No `delegatecall`. Covered by the Hardhat invariant suite (`test/ShieldedInvariants.test.ts`). |
-| **FHE ACL bypass** | Reviewed | Every `FHE.allow*` grant is enumerated and CI-checked by [`scripts/audit-acl.cts`](./scripts/audit-acl.cts). `FHE.allowGlobal` is used only on aggregate handles (`platformVolume`, `platformInvoiceCount`); per-row payouts use scoped `FHE.allow(amount, recipient)`. |
+| **FHE ACL bypass** | Reviewed | Every `FHE.allow*` grant is enumerated and CI-checked by [`scripts/audit-acl.cts`](../scripts/audit-acl.cts). `FHE.allowGlobal` is used only on aggregate handles (`platformVolume`, `platformInvoiceCount`); per-row payouts use scoped `FHE.allow(amount, recipient)`. |
 | **Replay — nullifiers** | Reviewed | Anonymous claims and `CipherDrop` use `keccak256`-derived nullifiers checked against an on-chain `used` mapping before state changes. |
 | **Replay — decrypt permits** | **Open gap** | The two-phase decrypt pattern (`allowPublic` → `decryptForTx` → `publishDecryptResult`) does not enforce on-chain permit freshness — see *Known limitations*. |
 | **Ciphertext-handle collision** | Reviewed | Invoice IDs are `keccak256` of caller-supplied entropy; encrypted handles come from CoFHE and are never reused as map keys. |
