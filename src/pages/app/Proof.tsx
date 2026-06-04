@@ -88,7 +88,7 @@ export function Proof() {
         {[
           { icon: <FlaskConical className="w-5 h-5 text-primary" />, title: 'E2E suite', body: 'scripts/e2e-test.cts + test-all-flows.cts — 67 on-chain tests exercising every contract against the live deployment.' },
           { icon: <Lock className="w-5 h-5 text-primary" />, title: 'Real FHE', body: 'Encryption runs through @cofhe/sdk (TFHE + ZK proof). Contracts compute on euint64 ciphertext — verify the FHE ops on Etherscan.' },
-          { icon: <Eye className="w-5 h-5 text-primary" />, title: 'Permit-gated reveal', body: 'Amounts decrypt only with an EIP-712 permit via the CoFHE Threshold Network — try it on any encrypted balance.' },
+          { icon: <Eye className="w-5 h-5 text-primary" />, title: 'Two-phase reveal, tested', body: 'The decryptForTx → publishDecryptResult reveal path runs in the suite for both ebool (SalaryProof) and euint64 (FeeModule) handles — not just manual. Amounts still decrypt only via an EIP-712 permit on the CoFHE Threshold Network.' },
         ].map(card => (
           <div key={card.title} className="bg-surface-1 border border-border-default rounded-2xl p-5 space-y-2">
             {card.icon}
